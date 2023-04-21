@@ -7,6 +7,9 @@ from scr.iiif import ManifestIIIF
 from scr.utils import make_out_dirs
 
 # test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
+#ref 1 https://github.com/PonteIneptique/iiif-random-downloader/blob/main/cli.py
+# ref 2 https://github.com/YaleDHLab/iiif-downloader/blob/master/iiif_downloader/__init__.py#L16
+
 
 @click.command()
 @click.argument("url", type=click.STRING)
