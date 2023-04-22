@@ -1,5 +1,9 @@
 import os
 import shutil
+import json
+import random
+
+from .variables import ImageList
 
 
 def cleaning_folder(path):
@@ -20,15 +24,33 @@ def cleaning_folder(path):
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
-def save_json(obj, **kwargs):
-    """Save self.json to disk"""
-    with open(os.path.join(XML_CLEAN, "list_correction.json"), mode="w") as f:
-        json.dump(list_files, f, indent=3, ensure_ascii=False)
+def save_json(iiif_json: dict, file_path: str, **kwargs):
+    """
+    Save self.json to disk
+    iiif_json : Dict, manifest IIIF
+    file_path : str, directory to save json files
+    """
+    try:
+        with open(os.path.join(file_path, "manifest_IIIF.json"), mode="w") as f:
+            json.dump(iiif_json, f, indent=3, ensure_ascii=False)
+    except Exception as e:
+        print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
-def make_out_dirs(self):
+def make_out_dirs(path):
     """Make the output directories in which saved data is stored"""
-    for i in ['manifests', 'images', 'metadata']:
-        out_dir = os.path.join(self.out_dir, i)
+    for d in ['manifests', 'images', 'metadata']:
+        out_dir = os.path.join(path, d)
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
+
+def randomized(image_list: ImageList, number: int = 10) -> ImageList:
+    """ Selects [number] images from ImageList
+
+    :param image_list: List of images link and filename
+    :param number: Number of images to select
+    :return: Filtered image list
+    """
+    # In place randomization
+    random.shuffle(image_list)
+    return image_list[:min(number, len(image_list) - 1)]

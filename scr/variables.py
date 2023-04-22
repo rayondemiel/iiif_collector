@@ -1,8 +1,7 @@
 from typing import List, Tuple
 
 # options
-DEFAULT_OUT_DIR = "output/"
-DEFAULT_VERBOSE = False
+DEFAULT_OUT_DIR = "iiif_output/"
 # manifest params
 Uri = str
 Filename = str
