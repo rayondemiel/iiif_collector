@@ -1,6 +1,5 @@
 import click
 import os
-import requests
 
 from scr.iiif import ManifestIIIF
 from scr.utils import make_out_dirs
@@ -13,11 +12,14 @@ from scr.utils import make_out_dirs
 
 @click.command()
 @click.argument("url", type=click.STRING)
-@click.option("-i", "--image", "image", type=bool, default=False)
+@click.option("-i", "--image", "image", type=bool, default=False, help="Active image api")
+@click.option("-w", "--width", "width", type=str, help="Width to resize image")
+@click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
+              help="Width to resize image", case_sensitive=False)
 @click.option("-d", "--directory", "directory", type=click.Path(exists=True, dir_okay=True, file_okay=False),
               default="./",
               help="Directory where to save the images")
-@click.option("-n", "--number", "number", type=int, help="Number of images to save", default=10)
+@click.option("-n", "--number", "number", type=int, help="Number of images to save by manifest", default=10)
 @click.option("-v", "--verbose", "verbose", type=bool, default=False)
 def run_collect(url, **kwargs):
     """
@@ -25,14 +27,15 @@ def run_collect(url, **kwargs):
     you must activate the option
 
     :param url: url IIIF manifest or images
-    :return:
     """
 
     current_path = os.path.dirname(os.path.abspath(__file__))
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
-    if kwargs['image'] is False:
+    if kwargs['image']:
+
+    else:
         manifest = ManifestIIIF(str(url), path=current_path, n=kwargs['number'], verbose=kwargs['verbose'])
         if kwargs['verbose']:
             print("Creating directory to IIIF files")
@@ -40,6 +43,7 @@ def run_collect(url, **kwargs):
         manifest.save_manifest()
         manifest.save_metadata()
         manifest.save_image()
+
 
     print("! Finish !")
 

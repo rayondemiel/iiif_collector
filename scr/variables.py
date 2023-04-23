@@ -2,6 +2,7 @@ from typing import List, Tuple
 
 # options
 DEFAULT_OUT_DIR = "iiif_output/"
+DEFAULT_IMG_OUT_DIR = "iiif_image_output/"
 # manifest params
 ##ImageList
 Uri = str

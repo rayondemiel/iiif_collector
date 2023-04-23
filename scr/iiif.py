@@ -3,7 +3,7 @@ import requests
 import os
 import tqdm
 
-from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList
+from .variables import DEFAULT_OUT_DIR, DEFAULT_IMG_OUT_DIR, ImageList, MetadataList
 from .utils import save_json, save_txt, randomized
 
 
@@ -85,3 +85,44 @@ class ManifestIIIF(object):
             save_txt(list_mtda=mtda, file_path=out_path)
         if self.verbose:
             print('Finish to save metadata !')
+
+
+class ImageIIIF(object):
+    json = {}
+    id = ''
+    img = None
+
+    def __init__(self, url, **kwargs):
+        self.url = url
+        self.width = kwargs.get('width')
+        self.out_dir = kwargs.get('out_dir', DEFAULT_IMG_OUT_DIR)
+        self.verbose = kwargs.get('verbose')
+        self._load_from_url()
+
+    def _load_from_url(self, *args):
+        '''Load a IIIF image from a url'''
+        url = args[0] if len(args) else self.url
+        url = self._format_url(url)
+        if self.verbose: print(' * loading image from url', url)
+        self.id = url.split('/')[-5]
+        self.img = requests.get(url).content
+
+    def _format_url(self, url):
+        '''Format the url to request an image of a reasonable size'''
+        # {scheme}://{server}{/prefix}/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
+        # scheme, server, prefix, identifier, region, size, rotation, quality = [i for i in url.split('/') if i]
+        split = url.split('/')
+        split[-3] = str(self.width)
+        if self.width != 'full': split[-3] += ','
+        return '/'.join(split)
+
+    def save_image(self):
+        '''Save image to disk. NB: '''
+        out_path = os.path.join(self.out_dir, 'images', self.id)
+        if not out_path.endswith('.png'):
+            out_path += '.png'
+        if self.verbose: print(' * saving', out_path)
+        with open(out_path, 'wb') as out:
+            out.write(self.img)
+
+    def save_metadata(self):
