@@ -1,5 +1,4 @@
 import click
-import tqdm
 import os
 import requests
 
@@ -22,7 +21,8 @@ from scr.utils import make_out_dirs
 @click.option("-v", "--verbose", "verbose", type=bool, default=False)
 def run_collect(url, **kwargs):
     """
-    Running script to get and download iiif images, metadata and manifests. If you want a iiif image API, you must activate the option
+    Running script to get and download iiif images, metadata and manifests. If you want a iiif image API,
+    you must activate the option
 
     :param url: url IIIF manifest or images
     :return:
@@ -32,13 +32,16 @@ def run_collect(url, **kwargs):
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
-    manifest = ManifestIIIF(str(url), path=current_path, n=kwargs['number'], verbose=kwargs['verbose'])
-    if kwargs['verbose']:
-        print("Creating directory to IIIF files")
-    #make_out_dirs(manifest.out_dir)
+    if kwargs['image'] is False:
+        manifest = ManifestIIIF(str(url), path=current_path, n=kwargs['number'], verbose=kwargs['verbose'])
+        if kwargs['verbose']:
+            print("Creating directory to IIIF files")
+        make_out_dirs(manifest.out_dir)
+        manifest.save_manifest()
+        manifest.save_metadata()
+        manifest.save_image()
 
-    #manifest.save_manifest()
-    #manifest.save_metadata()
+    print("! Finish !")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,13 @@
+import shutil
 import requests
 import os
+import tqdm
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList
-from .utils import save_json, save_txt
+from .utils import save_json, save_txt, randomized
 
 
-class ManifestIIIF:
+class ManifestIIIF(object):
     """
         Class to manipulate IIIF manifest
     """
@@ -43,7 +45,7 @@ class ManifestIIIF:
         if self.verbose:
             print('Finish to save manifests !')
 
-    def get_images_from_manifest(self) -> ImageList:
+    def _get_images_from_manifest(self) -> ImageList:
         """ Gets a URI, read the manifest
 
         :param self: URI of a manifest
@@ -55,7 +57,18 @@ class ManifestIIIF:
             for canvas in self.json['sequences'][0]['canvases']
         ])
 
+    def save_image(self):
 
+        if self._json_present():
+            images = self._get_images_from_manifest()
+            images = randomized(images, self.n)
+            for url, filename in tqdm.tqdm(images):
+                r = requests.get(url, stream=True, allow_redirects=True)
+                out_path = os.path.join(self.out_dir, 'images')
+                if 200 <= r.status_code < 400:
+                    with open(os.path.join(out_path, filename), 'wb') as f:
+                        r.raw.decode_content = True
+                        shutil.copyfileobj(r.raw, f)
 
     def _get_metadata(self) -> MetadataList:
         """ Gets a URI, read the manifest

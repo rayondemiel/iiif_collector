@@ -53,7 +53,7 @@ def make_out_dirs(path):
             os.makedirs(out_dir)
 
 
-def randomized(image_list: ImageList, number: int = 10) -> ImageList:
+def randomized(image_list: ImageList, number: int) -> ImageList:
     """ Selects [number] images from ImageList
 
     :param image_list: List of images link and filename
