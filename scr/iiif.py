@@ -1,8 +1,8 @@
 import requests
 import os
 
-from .variables import DEFAULT_OUT_DIR, ImageList
-from .utils import save_json
+from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList
+from .utils import save_json, save_txt
 
 
 class ManifestIIIF:
@@ -38,8 +38,8 @@ class ManifestIIIF:
     def save_manifest(self):
         """Save self.json to disk"""
         if self._json_present():
-            out_path = os.path.join(self.out_dir, 'manifests', self.id)
-            save_json(iiif_json=self.json, file_path=out_path, verbose=self.verbose)
+            out_path = os.path.join(self.out_dir, 'manifests')
+            save_json(iiif_json=self.json, file_path=out_path)
         if self.verbose:
             print('Finish to save manifests !')
 
@@ -54,3 +54,21 @@ class ManifestIIIF:
             (canvas['images'][0]['resource']['@id'], canvas['@id'].split("/")[-1] + ".jpeg")
             for canvas in self.json['sequences'][0]['canvases']
         ])
+
+
+
+    def _get_metadata(self) -> MetadataList:
+        """ Gets a URI, read the manifest
+
+        :return: Dict, list of all metadatas in manifest iiif
+        """
+        return list([(mtda['label'], mtda['value']) for mtda in self.json['metadata']])
+
+    def save_metadata(self):
+        """Save metadata to disk"""
+        if self._json_present():
+            out_path = os.path.join(self.out_dir, 'metadata')
+            mtda = self._get_metadata()
+            save_txt(list_mtda=mtda, file_path=out_path)
+        if self.verbose:
+            print('Finish to save metadata !')

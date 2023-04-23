@@ -3,7 +3,7 @@ import shutil
 import json
 import random
 
-from .variables import ImageList
+from .variables import ImageList, MetadataList
 
 
 def cleaning_folder(path):
@@ -24,7 +24,7 @@ def cleaning_folder(path):
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
-def save_json(iiif_json: dict, file_path: str, **kwargs):
+def save_json(iiif_json: dict, file_path: str, ):
     """
     Save self.json to disk
     iiif_json : Dict, manifest IIIF
@@ -37,12 +37,21 @@ def save_json(iiif_json: dict, file_path: str, **kwargs):
         print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
+def save_txt(list_mtda: MetadataList, file_path):
+    try:
+        with open(os.path.join(file_path, "metadata.txt"), 'w') as outfile:
+            outfile.writelines((str(f"{i[0]} : {i[1]}") + '\n' for i in list_mtda))
+    except Exception as e:
+        print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+
 def make_out_dirs(path):
     """Make the output directories in which saved data is stored"""
     for d in ['manifests', 'images', 'metadata']:
         out_dir = os.path.join(path, d)
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
+
 
 def randomized(image_list: ImageList, number: int = 10) -> ImageList:
     """ Selects [number] images from ImageList
