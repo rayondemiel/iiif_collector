@@ -16,9 +16,9 @@ class ManifestIIIF(object):
     json = {}
     images = []
 
-    def __init__(self, url: str, path: str, n: int or None, **kwargs):
+    def __init__(self, url: str, path: str, **kwargs):
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
-        self.n = n
+        self.n = kwargs.get('n')
         self.verbose = kwargs.get('verbose')
         self.url = url
         self._load_from_url(url)
@@ -33,7 +33,7 @@ class ManifestIIIF(object):
         self.id = self.json.get('@id', '').removeprefix("https://").replace("manifest/", "").replace('/', '_').rstrip(
             '.json')
 
-    def _json_present(self):
+    def _json_present(self) -> bool:
         """
         To verify which the script get the manifest and save it (self.json)
         :return: Bool, true if manifest in self.json
@@ -51,7 +51,7 @@ class ManifestIIIF(object):
         if self.verbose:
             print('Finish to save manifests !')
 
-    def _get_images_from_manifest(self) -> ImageList:
+    def get_images_from_manifest(self) -> ImageList:
         """ Gets a URI, read the manifest
 
         :param self: URI of a manifest
@@ -70,7 +70,7 @@ class ManifestIIIF(object):
         """
 
         if self._json_present():
-            images = self._get_images_from_manifest()
+            images = self.get_images_from_manifest()
             if self.random is True and self.n is not None:
                 images = randomized(images, self.n)
             elif self.random is False and self.n is not None:
@@ -82,6 +82,18 @@ class ManifestIIIF(object):
                     with open(os.path.join(out_path, filename), 'wb') as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
+    def save_list_images(self):
+        """
+
+        :return:
+        """
+
+        out_path = os.path.join(self.out_dir, 'images')
+        for image in self.get_images_from_manifest():
+            with open(os.path.join(out_path, 'list_image.txt'), 'a+') as f:
+                f.writelines(f"{image[0]}\n")
+
+
 
     def _get_metadata(self) -> MetadataList:
         """ Gets a URI, read the manifest
