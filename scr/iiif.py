@@ -16,11 +16,13 @@ class ManifestIIIF(object):
     json = {}
     images = []
 
-    def __init__(self, url: str, path: str, **kwargs):
+    def __init__(self, url: str, path: str, n: int or None, **kwargs):
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
-        self.n = kwargs.get('n')
+        self.n = n
         self.verbose = kwargs.get('verbose')
+        self.url = url
         self._load_from_url(url)
+        self.random = kwargs.get('random', False)
 
     def _load_from_url(self, url: str):
         """Load a IIIF manifest from an url.
@@ -32,8 +34,12 @@ class ManifestIIIF(object):
             '.json')
 
     def _json_present(self):
-        if not self.json:
-            print(' ! please use the load_from_url(path_to_manifest) method before calling this method')
+        """
+        To verify which the script get the manifest and save it (self.json)
+        :return: Bool, true if manifest in self.json
+        """
+        if len(self.json) < 1:
+            print(f"""Verify link or request. <ManifestIIIF._load_from_url> \n link : {self.url}""")
             return False
         return True
 
@@ -58,10 +64,17 @@ class ManifestIIIF(object):
         ])
 
     def save_image(self):
+        """
+        To save images referenced in IIIF manifest. All or partial (self.n).
+        We activate the randomizer only on a partial selection of images, otherwise not useful.
+        """
 
         if self._json_present():
             images = self._get_images_from_manifest()
-            images = randomized(images, self.n)
+            if self.random is True and self.n is not None:
+                images = randomized(images, self.n)
+            elif self.random is False and self.n is not None:
+                images = images[:min(self.n, len(images) - 1)]
             for url, filename in tqdm.tqdm(images):
                 r = requests.get(url, stream=True, allow_redirects=True)
                 out_path = os.path.join(self.out_dir, 'images')
@@ -73,7 +86,7 @@ class ManifestIIIF(object):
     def _get_metadata(self) -> MetadataList:
         """ Gets a URI, read the manifest
 
-        :return: Dict, list of all metadatas in manifest iiif
+        :return: Dict, list of all metadata in manifest iiif
         """
         return list([(mtda['label'], mtda['value']) for mtda in self.json['metadata']])
 
@@ -126,3 +139,4 @@ class ImageIIIF(object):
             out.write(self.img)
 
     def save_metadata(self):
+        return
