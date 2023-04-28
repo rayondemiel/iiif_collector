@@ -18,7 +18,6 @@ def get_list_image(url, **kwargs):
     :param kwargs:
     :return:
     """
-    print("hello")
     # Get path
     current_path = os.path.dirname(os.path.abspath(__file__))
     if kwargs['directory'] != "./":
@@ -31,6 +30,8 @@ def get_list_image(url, **kwargs):
     manifest.save_metadata()
     manifest.save_manifest()
 
+    print("Finish")
+    print(f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
 
 if __name__ == "__main__":
     get_list_image()

@@ -3,6 +3,9 @@ from typing import List, Tuple
 # options
 DEFAULT_OUT_DIR = "iiif_output/"
 DEFAULT_IMG_OUT_DIR = "iiif_image_output/"
+
+CONFIG_FOLDER = ['manifests', 'images', 'metadata']
+
 # manifest params
 ##ImageList
 Uri = str

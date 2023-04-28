@@ -3,7 +3,7 @@ import requests
 import os
 import tqdm
 
-from .variables import DEFAULT_OUT_DIR, DEFAULT_IMG_OUT_DIR, ImageList, MetadataList
+from .variables import DEFAULT_OUT_DIR, DEFAULT_IMG_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER
 from .utils import save_json, save_txt, randomized
 
 
@@ -15,6 +15,7 @@ class ManifestIIIF(object):
     id = ''
     json = {}
     images = []
+    list_image_txt = 'list_image.txt'
 
     def __init__(self, url: str, path: str, **kwargs):
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
@@ -82,15 +83,20 @@ class ManifestIIIF(object):
                     with open(os.path.join(out_path, filename), 'wb') as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
+
     def save_list_images(self):
         """
 
         :return:
         """
 
-        out_path = os.path.join(self.out_dir, 'images')
+        out_path = os.path.join(self.out_dir, 'images', self.list_image_txt)
+
+        if os.path.isfile(out_path):
+            os.remove(out_path)
+
         for image in self.get_images_from_manifest():
-            with open(os.path.join(out_path, 'list_image.txt'), 'a+') as f:
+            with open(os.path.join(out_path), 'a+') as f:
                 f.writelines(f"{image[0]}\n")
 
 
@@ -110,6 +116,21 @@ class ManifestIIIF(object):
             save_txt(list_mtda=mtda, file_path=out_path)
         if self.verbose:
             print('Finish to save metadata !')
+    
+    def __print_path__(self, idx: str) -> str:
+        """
+        Print complete path of file.
+        :idx: str, name of directory. Need to be configurate in CONFIG_FOLDER.
+        :return: str, file path's
+        """
+        if idx in CONFIG_FOLDER:
+            path = os.path.join(self.out_dir, idx, self.list_image_txt) 
+            if os.path.isfile(path):
+                return path
+            else:
+                print(f"Error! File {str(self.list_image_txt)} doesn't exists")
+        else:
+            print("<ManifestIIIF.__print_path> error config folder. Verify it.")
 
 
 class ImageIIIF(object):
