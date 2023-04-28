@@ -25,6 +25,7 @@ def get_list_image(url, **kwargs):
         current_path = os.path.join(current_path, kwargs['directory'])
 
     manifest = ManifestIIIF(str(url), path=current_path, verbose=kwargs['verbose'])
+    make_out_dirs(manifest.out_dir)
 
     manifest.save_list_images()
     manifest.save_metadata()
