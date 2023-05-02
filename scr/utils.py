@@ -3,7 +3,7 @@ import shutil
 import json
 import random
 
-from .variables import ImageList, MetadataList
+from .variables import ImageList, MetadataList, CONFIG_FOLDER
 
 
 def cleaning_folder(path):
@@ -47,7 +47,7 @@ def save_txt(list_mtda: MetadataList, file_path):
 
 def make_out_dirs(path):
     """Make the output directories in which saved data is stored"""
-    for d in ['manifests', 'images', 'metadata']:
+    for d in CONFIG_FOLDER:
         out_dir = os.path.join(path, d)
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)

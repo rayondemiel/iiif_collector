@@ -1,33 +1,45 @@
 import click
 import os
 
-from scr.iiif import ManifestIIIF
+from scr.iiif import ManifestIIIF, ImageIIIF
 from scr.utils import make_out_dirs
 
 
 # test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
+# test2 https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb10402127/manifest   -> voir pour telecharger sortie ocr (seealso)
+                                                                                                #retourne lien html (https://github.com/kba/hocr-spec)
 # ref 1 https://github.com/PonteIneptique/iiif-random-downloader/blob/main/cli.py
 # ref 2 https://github.com/YaleDHLab/iiif-downloader/blob/master/iiif_downloader/__init__.py#L16
 
 
 @click.command()
 @click.argument("url", type=click.STRING)
-@click.option("-i", "--image", "image", type=bool, default=False, help="Active image api")
-@click.option("-w", "--width", "width", type=str, help="Width to resize image")
-# @click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
-# help="Width to resize image", case_sensitive=False)
+@click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
+@click.option("-w", "--width", "width", type=str, default="max", help="Width to resize image")
+@click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
+              help="Width to resize image")
+@click.option("-r", "--rotation", "rotation", type=int, default=0, help="Rotation parameter specifies mirroring and \
+                                                                            rotation, 0 to 360.")
+@click.option("-R", "--region", "region", type=str, default="full", help="The region parameter defines the rectangular \
+                                                                            portion of the underlying image content to \
+                                                                            be returned (x,y,w,h). Use [pct:x,y,w,h] to select point.\
+                                                                             Default value is [full], [square] to \
+                                                                             determine area where the width\
+                                                                            and height are both equal.")
+@click.option("-f", "--format", "format", type=click.Choice(['jpg', 'tif', 'png', 'gif', 'jp2', 'pdf', 'webp']),
+              default='jpg', help="Select image format.")
 @click.option("-d", "--directory", "directory", type=click.Path(exists=True, dir_okay=True, file_okay=False),
               default="./",
               help="Directory where to save the images")
 @click.option("-n", "--number", "number", type=bool, is_flag=True,
               help="To active selection of images to save by manifest")
-@click.option("-r", "--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
+@click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
                                                                         "number indicated")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def run_collect(url, **kwargs):
     """
-    Running script to get and download iiif images, metadata and manifests. If you want an iiif image API,
-    you must activate the option
+    Running script to get and download iiif images, metadata and manifests. If you want access to specific image IIIF,
+    you must activate the option.
 
     :param url: url IIIF manifest or images
     """
@@ -46,9 +58,16 @@ def run_collect(url, **kwargs):
 
     # Selection mode
     if kwargs['image']:
-        print("image")
+        ImageIIIF.image_configuration(region=kwargs['region'],
+                                      size=kwargs['width'],
+                                      rotation=kwargs['rotation'],
+                                      quality=kwargs['quality'],
+                                      format=kwargs['format'],
+                                      )
     else:
-        manifest = ManifestIIIF(str(url), path=current_path, n=n, verbose=kwargs['verbose'], random=kwargs['random'])
+        manifest = ManifestIIIF(str(url), path=current_path, n=n,
+                                verbose=kwargs['verbose'], random=kwargs['random'],
+                                )
         if kwargs['verbose']:
             print("Creating directory to IIIF files")
         make_out_dirs(manifest.out_dir)
