@@ -13,10 +13,10 @@ from scr.utils import make_out_dirs
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def get_list_image(url, **kwargs):
     """
-    Function to get all url of images API in manifest
-    :param url: str, IIIF manifest link
-    :param kwargs: directory and verbose
-    :return: txt files
+
+    :param url:
+    :param kwargs:
+    :return:
     """
     # Get path
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +32,6 @@ def get_list_image(url, **kwargs):
 
     print("Finish")
     print(f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
-
 
 if __name__ == "__main__":
     get_list_image()

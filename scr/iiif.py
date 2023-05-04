@@ -3,8 +3,76 @@ import requests
 import os
 import tqdm
 
-from .variables import DEFAULT_OUT_DIR, DEFAULT_IMG_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER
+from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER
 from .utils import save_json, save_txt, randomized
+
+
+class ImageIIIF(object):
+    id_img = ''
+    img = None
+    config = {
+        'region': 'full',
+        'size': 'max',
+        'rotation': 0,
+        'quality': 'native',
+        'format': 'jpg'}
+    verbose = False
+    API = 3.0
+
+    def __init__(self, url, path, **kwargs):
+        self.url = url
+        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
+        self.verbose = kwargs.get('verbose')
+        if kwargs['api']:
+            self.API = kwargs['api']
+        self.load_image()
+
+    def load_image(self):
+        """Load a IIIF image from a url"""
+        url = self._format_url(self.url)
+        if self.verbose:
+            print(' * loading image from url', url)
+        self.id_img = url.split('/')[-5]
+        self.img = requests.get(url, stream=True, allow_redirects=True)
+
+    def _format_url(self, url):
+        """Format the url to request an image of a reasonable size"""
+        # {scheme}://{server}{/prefix}/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
+        # scheme, server, prefix, identifier, region, size, rotation, quality = [i for i in url.split('/') if i]
+        split = url.split('/')
+        split[-3] = self.config['size']
+        if self.config['size'] != 'full':
+            split[-3] += ','
+        return '/'.join(split)
+
+    @staticmethod
+    def image_configuration(**kwargs):
+        """
+        Configuration function to API image
+        :param kwargs: config attribute key
+        """
+        for arg in kwargs:
+            ImageIIIF.config[arg] = kwargs[arg]
+
+        # Condition API
+        if ImageIIIF.API < 3.0:
+            if kwargs['size'] == "full":
+                ImageIIIF.config['size'] = kwargs['size']
+
+        if ImageIIIF.verbose:
+            print("Add configuration IIIF")
+
+    def save_image(self, filename):
+        """
+        save image to disk
+        """
+        out_path = os.path.join(self.out_dir, 'images')
+        if 200 <= self.img.status_code < 400:
+            with open(os.path.join(out_path, filename), 'wb') as f:
+                self.img.raw.decode_content = True
+                shutil.copyfileobj(self.img.raw, f)
+        if self.verbose:
+            print(' * saving', out_path)
 
 
 class ManifestIIIF(object):
@@ -18,21 +86,23 @@ class ManifestIIIF(object):
     list_image_txt = 'list_image.txt'
 
     def __init__(self, url: str, path: str, **kwargs):
-        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
-        self.n = kwargs.get('n')
-        self.verbose = kwargs.get('verbose')
         self.url = url
-        self._load_from_url(url)
+        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
+        self.verbose = kwargs.get('verbose')
+        self.n = kwargs.get('n')
         self.random = kwargs.get('random', False)
+        self._load_from_url(url)
 
     def _load_from_url(self, url: str):
         """Load a IIIF manifest from an url.
         url: str, manifest's url
         """
-        if self.verbose: print(' * loading manifest from url', url)
+        if self.verbose:
+            print(' * loading manifest from url', url)
         self.json = requests.get(url).json()
         self.id = self.json.get('@id', '').removeprefix("https://").replace("manifest/", "").replace('/', '_').rstrip(
             '.json')
+        self.title = self.get_title()
 
     def _json_present(self) -> bool:
         """
@@ -43,6 +113,13 @@ class ManifestIIIF(object):
             print(f"""Verify link or request. <ManifestIIIF._load_from_url> \n link : {self.url}""")
             return False
         return True
+
+    def get_title(self) -> str:
+        """
+        Get the title of manifest
+        :return: str, title of manifest
+        """
+        return self.json['label']
 
     def save_manifest(self):
         """Save self.json to disk"""
@@ -72,17 +149,15 @@ class ManifestIIIF(object):
 
         if self._json_present():
             images = self.get_images_from_manifest()
+            out_path = os.path.join(self.out_dir, 'images')
             if self.random is True and self.n is not None:
                 images = randomized(images, self.n)
             elif self.random is False and self.n is not None:
                 images = images[:min(self.n, len(images) - 1)]
             for url, filename in tqdm.tqdm(images):
-                r = requests.get(url, stream=True, allow_redirects=True)
-                out_path = os.path.join(self.out_dir, 'images')
-                if 200 <= r.status_code < 400:
-                    with open(os.path.join(out_path, filename), 'wb') as f:
-                        r.raw.decode_content = True
-                        shutil.copyfileobj(r.raw, f)
+                image = ImageIIIF(url, out_path)
+                image.image_configuration()
+                image.save_image(filename)
 
     def save_list_images(self):
         """
@@ -99,8 +174,6 @@ class ManifestIIIF(object):
             with open(os.path.join(out_path), 'a+') as f:
                 f.writelines(f"{image[0]}\n")
 
-
-
     def _get_metadata(self) -> MetadataList:
         """ Gets a URI, read the manifest
 
@@ -116,7 +189,7 @@ class ManifestIIIF(object):
             save_txt(list_mtda=mtda, file_path=out_path)
         if self.verbose:
             print('Finish to save metadata !')
-    
+
     def __print_path__(self, idx: str) -> str:
         """
         Print complete path of file.
@@ -124,52 +197,10 @@ class ManifestIIIF(object):
         :return: str, file path's
         """
         if idx in CONFIG_FOLDER:
-            path = os.path.join(self.out_dir, idx, self.list_image_txt) 
+            path = os.path.join(self.out_dir, idx, self.list_image_txt)
             if os.path.isfile(path):
                 return path
             else:
                 print(f"Error! File {str(self.list_image_txt)} doesn't exists")
         else:
             print("<ManifestIIIF.__print_path> error config folder. Verify it.")
-
-
-class ImageIIIF(object):
-    json = {}
-    id = ''
-    img = None
-
-    def __init__(self, url, **kwargs):
-        self.url = url
-        self.width = kwargs.get('width')
-        self.out_dir = kwargs.get('out_dir', DEFAULT_IMG_OUT_DIR)
-        self.verbose = kwargs.get('verbose')
-        self._load_from_url()
-
-    def _load_from_url(self, *args):
-        '''Load a IIIF image from a url'''
-        url = args[0] if len(args) else self.url
-        url = self._format_url(url)
-        if self.verbose: print(' * loading image from url', url)
-        self.id = url.split('/')[-5]
-        self.img = requests.get(url).content
-
-    def _format_url(self, url):
-        '''Format the url to request an image of a reasonable size'''
-        # {scheme}://{server}{/prefix}/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
-        # scheme, server, prefix, identifier, region, size, rotation, quality = [i for i in url.split('/') if i]
-        split = url.split('/')
-        split[-3] = str(self.width)
-        if self.width != 'full': split[-3] += ','
-        return '/'.join(split)
-
-    def save_image(self):
-        '''Save image to disk. NB: '''
-        out_path = os.path.join(self.out_dir, 'images', self.id)
-        if not out_path.endswith('.png'):
-            out_path += '.png'
-        if self.verbose: print(' * saving', out_path)
-        with open(out_path, 'wb') as out:
-            out.write(self.img)
-
-    def save_metadata(self):
-        return
