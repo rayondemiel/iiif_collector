@@ -23,8 +23,6 @@ class ImageIIIF(object):
         self.url = url
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
         self.verbose = kwargs.get('verbose')
-        if kwargs['api']:
-            self.API = kwargs['api']
         self.load_image()
 
     def load_image(self):
@@ -56,8 +54,8 @@ class ImageIIIF(object):
 
         # Condition API
         if ImageIIIF.API < 3.0:
-            if kwargs['size'] == "full":
-                ImageIIIF.config['size'] = kwargs['size']
+            if kwargs['size'] == "max":
+                ImageIIIF.config['size'] = "full"
 
         if ImageIIIF.verbose:
             print("Add configuration IIIF")
@@ -73,6 +71,15 @@ class ImageIIIF(object):
                 shutil.copyfileobj(self.img.raw, f)
         if self.verbose:
             print(' * saving', out_path)
+
+    @staticmethod
+    def api_mode(level: float):
+        """
+        change api level. Ex: 3.0
+        :param level: decimal
+        :return:
+        """
+        ImageIIIF.API = level
 
 
 class ManifestIIIF(object):

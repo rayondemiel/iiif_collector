@@ -7,7 +7,7 @@ from scr.utils import make_out_dirs
 
 # test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
 # test2 https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb10402127/manifest   -> voir pour telecharger sortie ocr (seealso)
-                                                                                                #retourne lien html (https://github.com/kba/hocr-spec)
+# retourne lien html (https://github.com/kba/hocr-spec)
 # ref 1 https://github.com/PonteIneptique/iiif-random-downloader/blob/main/cli.py
 # ref 2 https://github.com/YaleDHLab/iiif-downloader/blob/master/iiif_downloader/__init__.py#L16
 
@@ -28,13 +28,14 @@ from scr.utils import make_out_dirs
                                                                             and height are both equal.")
 @click.option("-f", "--format", "format", type=click.Choice(['jpg', 'tif', 'png', 'gif', 'jp2', 'pdf', 'webp']),
               default='jpg', help="Select image format.")
+@click.option("-a", "--api", "api", type=float, default=3.0, help="Determine API level to change change configuration")
 @click.option("-d", "--directory", "directory", type=click.Path(exists=True, dir_okay=True, file_okay=False),
               default="./",
               help="Directory where to save the images")
 @click.option("-n", "--number", "number", type=bool, is_flag=True,
               help="To active selection of images to save by manifest")
 @click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
-                                                                        "number indicated")
+                                                                  "number indicated")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def run_collect(url, **kwargs):
     """
@@ -58,12 +59,17 @@ def run_collect(url, **kwargs):
 
     # Selection mode
     if kwargs['image']:
-        ImageIIIF.image_configuration(region=kwargs['region'],
-                                      size=kwargs['width'],
-                                      rotation=kwargs['rotation'],
-                                      quality=kwargs['quality'],
-                                      format=kwargs['format'],
-                                      )
+        image = ImageIIIF(url=str(url), path=current_path, verbose=kwargs['verbose'])
+        if kwargs['api'] != 3.0:
+            image.api_mode(kwargs['api'])
+        image.image_configuration(region=kwargs['region'],
+                                  size=kwargs['width'],
+                                  rotation=kwargs['rotation'],
+                                  quality=kwargs['quality'],
+                                  format=kwargs['format'],
+                                  )
+        print(image.API)
+        print(image.config)
     else:
         manifest = ManifestIIIF(str(url), path=current_path, n=n,
                                 verbose=kwargs['verbose'], random=kwargs['random'],
