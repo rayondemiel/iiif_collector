@@ -4,7 +4,7 @@ import os
 import tqdm
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER
-from .utils import save_json, save_txt, randomized
+from .utils import save_json, save_txt, randomized, journal_error
 
 
 class ImageIIIF(object):
@@ -23,7 +23,6 @@ class ImageIIIF(object):
         self.url = url
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
         self.verbose = kwargs.get('verbose')
-        self.load_image()
 
     def load_image(self):
         """Load a IIIF image from a url"""
@@ -32,15 +31,32 @@ class ImageIIIF(object):
             print(' * loading image from url', url)
         self.id_img = url.split('/')[-5]
         self.img = requests.get(url, stream=True, allow_redirects=True)
+        try:
+            self.img = requests.get(url, stream=True, allow_redirects=True)
+            if 200 <= self.img.status_code < 400:
+                self.save_image(self.id_img)
+            else:
+                print(f"{url}, {self.img.status_code}")
+                journal_error(self.out_dir, url=url, error=self.img.status_code)
+                pass
+        except requests.exceptions.Timeout as err:
+            print(err)
+        except requests.exceptions.TooManyRedirects as err:
+            print(err)
+        except requests.exceptions.ConnectionError as err:
+            print(err)
 
     def _format_url(self, url):
         """Format the url to request an image of a reasonable size"""
         # {scheme}://{server}{/prefix}/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
         # scheme, server, prefix, identifier, region, size, rotation, quality = [i for i in url.split('/') if i]
         split = url.split('/')
-        split[-3] = self.config['size']
-        if self.config['size'] != 'full':
+        split[-4] = str(self.config['region'])
+        split[-3] = str(self.config['size'])
+        if self.config['size'] != 'max' and self.config['size'] != 'full':
             split[-3] += ','
+        split[-2] = str(self.config['rotation'])
+        split[-1] = self.change_format(split[-1])
         return '/'.join(split)
 
     @staticmethod
@@ -80,6 +96,17 @@ class ImageIIIF(object):
         :return:
         """
         ImageIIIF.API = level
+
+    def change_format(self, file):
+        """
+
+        :param file:
+        :return:
+        """
+        file = file.split(".")
+        file[0] = self.config['quality']
+        file[-1] = self.config['format']
+        return '.'.join(file)
 
 
 class ManifestIIIF(object):
