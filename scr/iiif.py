@@ -4,37 +4,84 @@ import os
 import tqdm
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER
-from .utils import save_json, save_txt, randomized, journal_error
+from .utils import save_json, save_txt, randomized, journal_error, suppress_char
 
 
-class ImageIIIF(object):
-    id_img = ''
-    img = None
+class ConfigIIIF(object):
+    verbose = False
     config = {
         'region': 'full',
         'size': 'max',
         'rotation': 0,
         'quality': 'native',
-        'format': 'jpg'}
+        'format': 'default'}
+    API = 3.0
+
+    def __init__(self, **kwargs):
+        self.verbose = kwargs.get('verbose', False)
+        pass
+
+    @staticmethod
+    def image_configuration(**kwargs):
+        """
+        Configuration function to API image
+        :param kwargs: config attribute key
+        """
+        for arg in kwargs:
+            ConfigIIIF.config[arg] = kwargs[arg]
+
+        # Condition API
+        if ConfigIIIF.API < 3.0:
+            if kwargs['size'] == "max":
+                ConfigIIIF.config['size'] = "full"
+        if ImageIIIF.verbose:
+            print("Add configuration IIIF")
+
+    @staticmethod
+    def api_mode(level: float):
+        """
+        change api level. Ex: 3.0
+        :param level: decimal
+        :return:
+        """
+        ConfigIIIF.API = level
+        if ConfigIIIF.verbose and ConfigIIIF.API != 3.0:
+            print(f"Changing API level to {str(level)}")
+
+
+class ImageIIIF(ConfigIIIF):
+    id_img = ''
+    img = None
     verbose = False
     API = 3.0
 
     def __init__(self, url, path, **kwargs):
-        self.url = url
-        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
-        self.verbose = kwargs.get('verbose')
+        """
+        Class treating an image API IIIF with parameters.
 
-    def load_image(self):
+        :param url: str, URI link's of image
+        :param path: directory to save datas and metadatas
+        :param kwargs: verbose
+        """
+        super().__init__(**kwargs)
+        self.url = url
+        self.out_dir = path
+
+    def load_image(self, filename=None):
         """Load a IIIF image from a url"""
         url = self._format_url(self.url)
-        if self.verbose:
-            print(' * loading image from url', url)
-        self.id_img = url.split('/')[-5]
-        self.img = requests.get(url, stream=True, allow_redirects=True)
+        # get filename
+        if filename is None:
+            self.id_img = url.split('/')[-5]
+        else:
+            self.id_img = filename
+
         try:
             self.img = requests.get(url, stream=True, allow_redirects=True)
             if 200 <= self.img.status_code < 400:
-                self.save_image(self.id_img)
+                #self.save_image(self.id_img)
+                if ImageIIIF.verbose:
+                    print(f"Succesing request image {str(self.id_img)} to {url}")
             else:
                 print(f"{url}, {self.img.status_code}")
                 journal_error(self.out_dir, url=url, error=self.img.status_code)
@@ -51,65 +98,44 @@ class ImageIIIF(object):
         # {scheme}://{server}{/prefix}/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
         # scheme, server, prefix, identifier, region, size, rotation, quality = [i for i in url.split('/') if i]
         split = url.split('/')
+        if ImageIIIF.verbose:
+            print("configuration parameters API image")
         split[-4] = str(self.config['region'])
         split[-3] = str(self.config['size'])
         if self.config['size'] != 'max' and self.config['size'] != 'full':
             split[-3] += ','
         split[-2] = str(self.config['rotation'])
         split[-1] = self.change_format(split[-1])
+        if ImageIIIF.verbose:
+            print("Finish configuration parameters API image")
         return '/'.join(split)
 
-    @staticmethod
-    def image_configuration(**kwargs):
-        """
-        Configuration function to API image
-        :param kwargs: config attribute key
-        """
-        for arg in kwargs:
-            ImageIIIF.config[arg] = kwargs[arg]
-
-        # Condition API
-        if ImageIIIF.API < 3.0:
-            if kwargs['size'] == "max":
-                ImageIIIF.config['size'] = "full"
-
-        if ImageIIIF.verbose:
-            print("Add configuration IIIF")
-
-    def save_image(self, filename):
+    def save_image(self):
         """
         save image to disk
         """
         out_path = os.path.join(self.out_dir, 'images')
         if 200 <= self.img.status_code < 400:
-            with open(os.path.join(out_path, filename), 'wb') as f:
+            with open(os.path.join(out_path, self.id_img), 'wb') as f:
                 self.img.raw.decode_content = True
                 shutil.copyfileobj(self.img.raw, f)
         if self.verbose:
             print(' * saving', out_path)
 
-    @staticmethod
-    def api_mode(level: float):
-        """
-        change api level. Ex: 3.0
-        :param level: decimal
-        :return:
-        """
-        ImageIIIF.API = level
-
     def change_format(self, file):
         """
-
-        :param file:
+        Change format image and transform last element in list
+        :param file: Get ultimate element in list split url
         :return:
         """
         file = file.split(".")
         file[0] = self.config['quality']
-        file[-1] = self.config['format']
+        if self.config['format'] != 'default':
+            file[-1] = self.config['format']
         return '.'.join(file)
 
 
-class ManifestIIIF(object):
+class ManifestIIIF(ConfigIIIF):
     """
         Class to manipulate IIIF manifest
     """
@@ -120,12 +146,23 @@ class ManifestIIIF(object):
     list_image_txt = 'list_image.txt'
 
     def __init__(self, url: str, path: str, **kwargs):
+        """
+        Class treating a manifest IIIF
+
+        :param url: str, URI of a manifest
+        :param path: directory to save datas and metadatas
+        :param kwargs: verbose : bool
+                        n : int, Desired number of images to download
+                        random: bool, to randomize image. Best to prepare htr corpus. Default in False
+        """
+        super().__init__(**kwargs)
         self.url = url
-        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
-        self.verbose = kwargs.get('verbose')
         self.n = kwargs.get('n')
         self.random = kwargs.get('random', False)
         self._load_from_url(url)
+        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR, self.title)
+        if os.path.isdir(self.out_dir) is False:
+            os.makedirs(self.out_dir)
 
     def _load_from_url(self, url: str):
         """Load a IIIF manifest from an url.
@@ -136,7 +173,7 @@ class ManifestIIIF(object):
         self.json = requests.get(url).json()
         self.id = self.json.get('@id', '').removeprefix("https://").replace("manifest/", "").replace('/', '_').rstrip(
             '.json')
-        self.title = self.get_title()
+        self.title = self._get_title()
 
     def _json_present(self) -> bool:
         """
@@ -148,12 +185,12 @@ class ManifestIIIF(object):
             return False
         return True
 
-    def get_title(self) -> str:
+    def _get_title(self) -> str:
         """
         Get the title of manifest
         :return: str, title of manifest
         """
-        return self.json['label']
+        return suppress_char(self.json['label'])
 
     def save_manifest(self):
         """Save self.json to disk"""
@@ -171,7 +208,7 @@ class ManifestIIIF(object):
         """
 
         return list([
-            (canvas['images'][0]['resource']['@id'], canvas['@id'].split("/")[-1] + ".jpeg")
+            (canvas['images'][0]['resource']['@id'], canvas['@id'].split("/")[-1] + "." +self.config['format'])
             for canvas in self.json['sequences'][0]['canvases']
         ])
 
@@ -183,20 +220,23 @@ class ManifestIIIF(object):
 
         if self._json_present():
             images = self.get_images_from_manifest()
-            out_path = os.path.join(self.out_dir, 'images')
             if self.random is True and self.n is not None:
                 images = randomized(images, self.n)
             elif self.random is False and self.n is not None:
                 images = images[:min(self.n, len(images) - 1)]
             for url, filename in tqdm.tqdm(images):
-                image = ImageIIIF(url, out_path)
-                image.image_configuration()
-                image.save_image(filename)
+                print(filename)
+                image = ImageIIIF(url, self.out_dir)
+                image.config = self.config
+                image.load_image(filename=filename)
+                image.save_image()
+            if self.verbose:
+                print('Finish to save image !')
 
     def save_list_images(self):
         """
-
-        :return:
+        Save all images instanced in disk
+        :return: None
         """
 
         out_path = os.path.join(self.out_dir, 'images', self.list_image_txt)

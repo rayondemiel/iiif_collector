@@ -3,6 +3,7 @@ import os
 
 from scr.iiif import ManifestIIIF, ImageIIIF
 from scr.utils import make_out_dirs
+from scr.variables import DEFAULT_OUT_DIR
 
 
 # test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
@@ -29,8 +30,8 @@ from scr.utils import make_out_dirs
                                                                              Default value is [full], [square] to \
                                                                              determine area where the width\
                                                                             and height are both equal.")
-@click.option("-f", "--format", "format", type=click.Choice(['jpg', 'tif', 'png', 'gif', 'jp2', 'pdf', 'webp']),
-              default='jpg', help="Select image format.")
+@click.option("-f", "--format", "format", type=click.Choice(['default', 'jpg', 'tif', 'png', 'gif', 'jp2', 'pdf', 'webp']),
+              default="default", help="Select image format.")
 @click.option("-a", "--api", "api", type=float, default=3.0, help="Determine API level to change change configuration")
 @click.option("-d", "--directory", "directory", type=click.Path(exists=True, dir_okay=True, file_okay=False),
               default="./",
@@ -62,26 +63,43 @@ def run_collect(url, **kwargs):
 
     # Selection mode
     if kwargs['image']:
-        image = ImageIIIF(url=str(url), path=current_path, verbose=kwargs['verbose'])
-        make_out_dirs(image.out_dir)
+        # Determine good path in case of singular image
+        out_dir = os.path.join(current_path, DEFAULT_OUT_DIR)
+        # Instance image url
+        image = ImageIIIF(url=str(url), path=out_dir, verbose=kwargs['verbose'])
+        # create directory
+        make_out_dirs(os.path.join(image.out_dir, "API_IMAGE"))
+        if kwargs['verbose']:
+            print("Creating directory to IIIF files")
+        # Change api configuration
         if kwargs['api'] != 3.0:
             image.api_mode(kwargs['api'])
+        # API parameters
         image.image_configuration(region=kwargs['region'],
                                   size=kwargs['width'],
                                   rotation=kwargs['rotation'],
                                   quality=kwargs['quality'],
                                   format=kwargs['format'],
                                   )
+        # To get and download image
         image.load_image()
         image.save_image(image.id_img)
 
     else:
+        # Instance manifest
         manifest = ManifestIIIF(str(url), path=current_path, n=n,
                                 verbose=kwargs['verbose'], random=kwargs['random'],
                                 )
+        manifest.image_configuration(region=kwargs['region'],
+                                     size=kwargs['width'],
+                                     rotation=kwargs['rotation'],
+                                     quality=kwargs['quality'],
+                                     format=kwargs['format'],
+                                     )
         if kwargs['verbose']:
             print("Creating directory to IIIF files")
         make_out_dirs(manifest.out_dir)
+        # Get manifest, metadata and images
         manifest.save_manifest()
         manifest.save_metadata()
         manifest.save_image()

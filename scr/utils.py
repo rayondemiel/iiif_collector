@@ -6,6 +6,20 @@ import random
 from .variables import ImageList, MetadataList, CONFIG_FOLDER
 
 
+def suppress_char(txt):
+    """
+    Function to remove special characters
+    :param txt: str, line to need cleanup
+    :return: str, txt cleaned
+    """
+    txt = txt.rstrip()
+    punctuation = "!:;\",?’.⁋ "
+    for sign in punctuation:
+        txt = txt.replace(sign, "_")
+        txt = txt.replace("__", "_")
+    return txt
+
+
 def cleaning_folder(path):
     """
     action to clean the describe folder
@@ -45,12 +59,17 @@ def save_txt(list_mtda: MetadataList, file_path):
         print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
-def make_out_dirs(path):
+def make_out_dirs(path, api=False):
     """Make the output directories in which saved data is stored"""
-    for d in CONFIG_FOLDER:
-        out_dir = os.path.join(path, d)
+    if api:
+        out_dir = os.path.join(path, 'image_IIIF')
         if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+            os.makedirs(os.path.join(out_dir))
+    else:
+        for d in CONFIG_FOLDER:
+            out_dir = os.path.join(path, d)
+            if not os.path.exists(out_dir):
+                os.makedirs(out_dir)
 
 
 def randomized(image_list: ImageList, number: int) -> ImageList:

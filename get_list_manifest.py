@@ -33,5 +33,6 @@ def get_list_image(url, **kwargs):
     print("Finish")
     print(f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
 
+
 if __name__ == "__main__":
     get_list_image()
