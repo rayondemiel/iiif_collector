@@ -1,2 +1,3 @@
 .env/
 iiif_output/**
+__pychache__/
