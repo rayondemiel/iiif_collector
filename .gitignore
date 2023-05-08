@@ -1,3 +1,7 @@
 .env/
+<<<<<<< HEAD
 iiif_output/**
 __pychache__/
+=======
+iiif_output/
+>>>>>>> 8d380ad2c002722d746297a9e5eed86ae23ff495
