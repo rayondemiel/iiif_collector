@@ -2,6 +2,7 @@ import shutil
 import requests
 import os
 import tqdm
+import re
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER
 from .utils import save_json, save_txt, randomized, journal_error, suppress_char
@@ -48,6 +49,16 @@ class ConfigIIIF(object):
         if ConfigIIIF.verbose and ConfigIIIF.API != 3.0:
             print(f"Changing API level to {str(level)}")
 
+    @staticmethod
+    def __get_id__(name):
+        """
+        Get and clean file name
+        :param name: str, filename identifier on API image
+        :return: txt cleaned
+        """
+        extension = re.compile(r"\.\w{3,4}$")
+        return re.sub(extension, "", name)
+
 
 class ImageIIIF(ConfigIIIF):
     id_img = ''
@@ -70,20 +81,20 @@ class ImageIIIF(ConfigIIIF):
     def load_image(self, filename=None):
         """Load a IIIF image from a url"""
         url = self._format_url(self.url)
+        if self.verbose:
+            print(url)
         # get filename
         if filename is None:
-            self.id_img = url.split('/')[-5]
+            self.id_img = self.__get_id__(url.split('/')[-5])
         else:
             self.id_img = filename
-
         try:
             self.img = requests.get(url, stream=True, allow_redirects=True)
             if 200 <= self.img.status_code < 400:
-                #self.save_image(self.id_img)
                 if ImageIIIF.verbose:
                     print(f"Succesing request image {str(self.id_img)} to {url}")
             else:
-                print(f"{url}, {self.img.status_code}")
+                print(f"error request, {url}, {self.img.status_code}")
                 journal_error(self.out_dir, url=url, error=self.img.status_code)
                 pass
         except requests.exceptions.Timeout as err:
@@ -116,7 +127,7 @@ class ImageIIIF(ConfigIIIF):
         """
         out_path = os.path.join(self.out_dir, 'images')
         if 200 <= self.img.status_code < 400:
-            with open(os.path.join(out_path, self.id_img), 'wb') as f:
+            with open(os.path.join(out_path, self.id_img + "." + self.config['format']), 'wb') as f:
                 self.img.raw.decode_content = True
                 shutil.copyfileobj(self.img.raw, f)
         if self.verbose:
@@ -130,8 +141,12 @@ class ImageIIIF(ConfigIIIF):
         """
         file = file.split(".")
         file[0] = self.config['quality']
+        # apply change extensio
         if self.config['format'] != 'default':
             file[-1] = self.config['format']
+        # update config
+        else:
+            self.config['format'] = file[-1]
         return '.'.join(file)
 
 
@@ -208,7 +223,7 @@ class ManifestIIIF(ConfigIIIF):
         """
 
         return list([
-            (canvas['images'][0]['resource']['@id'], canvas['@id'].split("/")[-1] + "." +self.config['format'])
+            (canvas['images'][0]['resource']['@id'], canvas['@id'].split("/")[-1])
             for canvas in self.json['sequences'][0]['canvases']
         ])
 

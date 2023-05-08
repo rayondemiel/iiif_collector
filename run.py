@@ -64,11 +64,11 @@ def run_collect(url, **kwargs):
     # Selection mode
     if kwargs['image']:
         # Determine good path in case of singular image
-        out_dir = os.path.join(current_path, DEFAULT_OUT_DIR)
+        out_dir = os.path.join(current_path, DEFAULT_OUT_DIR, "API_IMAGE")
         # Instance image url
         image = ImageIIIF(url=str(url), path=out_dir, verbose=kwargs['verbose'])
         # create directory
-        make_out_dirs(os.path.join(image.out_dir, "API_IMAGE"))
+        make_out_dirs(image.out_dir)
         if kwargs['verbose']:
             print("Creating directory to IIIF files")
         # Change api configuration
@@ -83,7 +83,7 @@ def run_collect(url, **kwargs):
                                   )
         # To get and download image
         image.load_image()
-        image.save_image(image.id_img)
+        image.save_image()
 
     else:
         # Instance manifest
