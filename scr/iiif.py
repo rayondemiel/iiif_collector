@@ -4,7 +4,7 @@ import os
 import tqdm
 import re
 
-from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER
+from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER, OUTPUT_LIST_TXT
 from .utils import save_json, save_txt, randomized, journal_error, suppress_char
 
 
@@ -21,6 +21,20 @@ class ConfigIIIF(object):
     def __init__(self, **kwargs):
         self.verbose = kwargs.get('verbose', False)
         pass
+
+    def __config__(self):
+        print(f"Api level is {str(self.API)}. \n"
+              f"Configuration is {str(self.config)}")
+
+    @staticmethod
+    def __get_id__(name):
+        """
+        Get and clean file name
+        :param name: str, filename identifier on API image
+        :return: txt cleaned
+        """
+        extension = re.compile(r"\.\w{3,4}$")
+        return re.sub(extension, "", name)
 
     @staticmethod
     def image_configuration(**kwargs):
@@ -49,22 +63,10 @@ class ConfigIIIF(object):
         if ConfigIIIF.verbose and ConfigIIIF.API != 3.0:
             print(f"Changing API level to {str(level)}")
 
-    @staticmethod
-    def __get_id__(name):
-        """
-        Get and clean file name
-        :param name: str, filename identifier on API image
-        :return: txt cleaned
-        """
-        extension = re.compile(r"\.\w{3,4}$")
-        return re.sub(extension, "", name)
-
 
 class ImageIIIF(ConfigIIIF):
     id_img = ''
     img = None
-    verbose = False
-    API = 3.0
 
     def __init__(self, url, path, **kwargs):
         """
@@ -77,6 +79,9 @@ class ImageIIIF(ConfigIIIF):
         super().__init__(**kwargs)
         self.url = url
         self.out_dir = path
+
+    def __str__(self):
+        print(f"URL api image is : {self.url}")
 
     def load_image(self, filename=None):
         """Load a IIIF image from a url"""
@@ -158,7 +163,7 @@ class ManifestIIIF(ConfigIIIF):
     id = ''
     json = {}
     images = []
-    list_image_txt = 'list_image.txt'
+    list_image_txt = OUTPUT_LIST_TXT
 
     def __init__(self, url: str, path: str, **kwargs):
         """
@@ -178,6 +183,9 @@ class ManifestIIIF(ConfigIIIF):
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR, self.title)
         if os.path.isdir(self.out_dir) is False:
             os.makedirs(self.out_dir)
+
+    def __str__(self):
+        print(f"URI manifest is : {self.url}")
 
     def _load_from_url(self, url: str):
         """Load a IIIF manifest from an url.
