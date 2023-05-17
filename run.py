@@ -3,8 +3,9 @@ import os
 
 from scr.iiif import ManifestIIIF, ImageIIIF
 from scr.iiif_list import ListIIIF
-from scr.utils import make_out_dirs
-from scr.variables import DEFAULT_OUT_DIR
+from scr.opt.utils import make_out_dirs
+from scr.opt.terminal import prompt
+from scr.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
 
 
 # test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
@@ -113,29 +114,80 @@ def iiif_singular(url, **kwargs):
     print("! Finish !")
 
 
+
 @run_collect.command()
 @click.argument("file", type=click.STRING)
-def iiif_list(file):
+@click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
+@click.option("-w", "--width", "width", type=str, default="max", help="Width to resize image")
+@click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
+              help="Width to resize image")
+@click.option("-r", "--rotation", "rotation", type=int, default=0, help="Rotation parameter specifies mirroring and \
+                                                                            rotation, 0 to 360.")
+@click.option("-R", "--region", "region", type=str, default="full", help="The region parameter defines the rectangular \
+                                                                            portion of the underlying image content to \
+                                                                            be returned (x,y,w,h). Use [pct:x,y,w,h] to select point.\
+                                                                             Default value is [full], [square] to \
+                                                                             determine area where the width\
+                                                                            and height are both equal.")
+@click.option("-f", "--format", "format",
+              type=click.Choice(['default', 'jpg', 'tif', 'png', 'gif', 'jp2', 'pdf', 'webp']),
+              default="default", help="Select image format.")
+@click.option("-a", "--api", "api", type=float, default=3.0, help="Determine API level to change change configuration")
+@click.option("-d", "--directory", "directory", type=click.Path(exists=True, dir_okay=True, file_okay=False),
+              default="./",
+              help="Directory where to save the images")
+@click.option("-n", "--number", "number", type=bool, is_flag=True,
+              help="To active selection of images to save by manifest")
+@click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
+                                                                  "number indicated")
+@click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
+def iiif_list(file, **kwargs):
     """
 
     :file:
     :return:
     """
-    manifest_list = ListIIIF()
+    # determinate quantity
+    if kwargs['number']:
+        n = int(input("How many images do you want (15 recommended)?"))
+    else:
+        # ALL
+        n = None
+
+    # Get path
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    if kwargs['directory'] != "./":
+        current_path = os.path.join(current_path, kwargs['directory'])
+
+    # Parsing file
+    list_iiif = ListIIIF()
     if file.endswith('.txt'):
-        manifest_list.read_txt(file)
+        list_iiif.read_txt(file)
     elif file.endswith('.csv'):
-        delimiter, header, encoding = ";", "infer", "utf-8"
         name_column = str(input("What is the name of iiif columns ? "))
-        check = str(input("Do you want to change paremeters by default ? press [Y/N] "))
-        print(f"delimiter : {delimiter}")
-        print(f"header : {header}")
-        print(f"encoding: {encoding}")
-        if check != check.lower():
-            delimiter, header, encoding = input(
-                "In the order [DELEMITER HEADER(int,None,infer) ENCODING] separated by space : ").split()
-        manifest_list.read_csv(file, name_column, delimiter=delimiter, encoding=encoding, header=header)
-        print(manifest_list.list_iiif)
+        print("Parameters by default :")
+        print(f"delimiter : {DEFAULT_CSV[0]}")
+        print(f"header : {DEFAULT_CSV[1]}")
+        print(f"encoding: {DEFAULT_CSV[2]}")
+        delimiter, header, encoding = prompt()
+        list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
+                               header=int(header))
+
+        if kwargs['image']:
+            pass
+        else:
+            try:
+                while True:
+                    i = next(list_iiif.url_iiif)
+
+                    #HERE
+                    # https://stackoverflow.com/questions/41659890/iterator-with-multithreading -> test multithreading (histoire d'en faire plusieurs en meme temps
+
+
+
+            except StopIteration:
+                pass
+
     else:
         raise FileExistsError("Sorry, your file need to be in csv or txt format.")
 

@@ -3,7 +3,7 @@ import shutil
 import json
 import random
 
-from .variables import ImageList, MetadataList, CONFIG_FOLDER
+from scr.variables import ImageList, MetadataList, CONFIG_FOLDER
 
 
 def suppress_char(txt):
