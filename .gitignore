@@ -2,3 +2,5 @@
 iiif_output/**
 __pychache__/
 iiif_output/
+.idea/
+test/

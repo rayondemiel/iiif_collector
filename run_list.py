@@ -1,1 +1,0 @@
-# faire cli pour list de uri iiif (csv ou txt)
