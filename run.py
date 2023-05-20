@@ -4,7 +4,7 @@ import os
 from scr.iiif import ManifestIIIF, ImageIIIF
 from scr.iiif_list import ListIIIF
 from scr.opt.utils import make_out_dirs
-from scr.opt.terminal import prompt
+#from scr.opt.terminal import prompt
 from scr.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
 
 
@@ -169,9 +169,10 @@ def iiif_list(file, **kwargs):
         print(f"delimiter : {DEFAULT_CSV[0]}")
         print(f"header : {DEFAULT_CSV[1]}")
         print(f"encoding: {DEFAULT_CSV[2]}")
-        delimiter, header, encoding = prompt()
-        list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
-                               header=int(header))
+        #delimiter, header, encoding = prompt()
+        #list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
+                               #header=int(header))
+        list_iiif.read_csv(file, name_column, delimiter=";")
 
         if kwargs['image']:
             pass
@@ -179,10 +180,11 @@ def iiif_list(file, **kwargs):
             try:
                 while True:
                     i = next(list_iiif.url_iiif)
+                    print(i)
 
                     #HERE
                     # https://stackoverflow.com/questions/41659890/iterator-with-multithreading -> test multithreading (histoire d'en faire plusieurs en meme temps
-
+                    # https://towardsdatascience.com/combining-multiprocessing-and-asyncio-in-python-for-performance-boosts-15496ffe96b iterator and asyncio
 
 
             except StopIteration:
