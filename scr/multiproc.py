@@ -3,29 +3,45 @@ import asyncio
 import aiohttp
 import threading
 
+from .iiif import ConfigIIIF, ImageIIIF
 
-class ParallelizeRequest:
+class AsyncIIIF(ImageIIIF):
 
-    def __init__(self, urls: list, **kwargs):
-        self.urls = urls
-        self.image = kwargs.get("image", False)
-        self.verbose = kwargs.get("verbose", False)
+    async def __aenter__(self):
+        self._session = aiohttp.ClientSession()
+        return self
 
-    @staticmethod
-    async def process_url(url):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if 200 <= response.status < 400:
-                    return await response.json()
+    async def __aexit__(self, *err):
+        await self._session.close()
+        self._session = None
 
-    @staticmethod
-    def process_urls(urls):
+    @classmethod
+    async def fetch(cls, url, filename=None):
+        url = cls._format_url(url)
+        if cls.verbose:
+            print(url)
+        # get filename
+        if filename is None:
+            cls.id_img = cls.__get_id__(url.split('/')[-5])
+        else:
+            cls.id_img = filename
+        try:
+            async with cls._session.get(url) as resp:
+                if 200 <= resp.status < 400:
+                    return await resp.json()
+        except Exception as err:
+            print(err)
+
+class ParallelizeImage(ConfigIIIF):
+
+    def process_urls(self, urls, path):
         # Create an event loop
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         # Create a task for each URL
-        tasks = [loop.create_task(ParallelizeRequest.process_url(url)) for url in urls]
+        tasks = [loop.create_task(AsyncIIIF.fetch(url)) for url in urls]
+        tasks_save = [loop.create_task(AsyncIIIF.fetch(url)) for url in urls]
 
         # Wait for all tasks to complete
         loop.run_until_complete(asyncio.gather(*tasks))
@@ -36,11 +52,11 @@ class ParallelizeRequest:
 
         # Close the event loop
         loop.close()
-        return "prout"
 
-    def run_image(self):
+    @classmethod
+    def run_image(cls, urls, path):
         # Use a ThreadPoolExecutor for multithreading
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            executor.submit(self.process_urls, self.urls)
-            if self.verbose:
+            executor.submit(cls.process_urls, urls, path)
+            if cls.verbose:
                 print(f"Number of threads used : {str(threading.active_count())}")
