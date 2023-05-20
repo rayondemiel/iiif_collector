@@ -4,7 +4,7 @@ import os
 from scr.iiif import ManifestIIIF, ImageIIIF
 from scr.iiif_list import ListIIIF
 from scr.opt.utils import make_out_dirs
-from scr.opt.terminal import prompt
+#from scr.opt.terminal import prompt
 from scr.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
 
 
@@ -97,6 +97,8 @@ def iiif_singular(url, **kwargs):
         manifest = ManifestIIIF(str(url), path=current_path, n=n,
                                 verbose=kwargs['verbose'], random=kwargs['random'],
                                 )
+        if kwargs['api'] != 3.0:
+            manifest.api_mode(kwargs['api'])
         manifest.image_configuration(region=kwargs['region'],
                                      size=kwargs['width'],
                                      rotation=kwargs['rotation'],
