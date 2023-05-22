@@ -52,11 +52,14 @@ class ParallelizeImage(ConfigIIIF):
 
         # Close the event loop
         loop.close()
+    
+    def __get_cpu__():
+        return min(8, multiprocessing.cpu_count() // 2)
 
     @classmethod
     def run_image(cls, urls, path):
         # Use a ThreadPoolExecutor for multithreading
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.__get_cpu__()) as executor:
             executor.submit(cls.process_urls, urls, path)
             if cls.verbose:
                 print(f"Number of threads used : {str(threading.active_count())}")
