@@ -6,6 +6,7 @@ from scr.iiif_list import ListIIIF
 from scr.opt.utils import make_out_dirs
 #from scr.opt.terminal import prompt
 from scr.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
+from scr.multiproc import ParallelizeImage
 
 
 # test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
@@ -174,24 +175,24 @@ def iiif_list(file, **kwargs):
                                #header=int(header))
         list_iiif.read_csv(file, name_column, delimiter=";")
 
-        if kwargs['image']:
-            pass
-        else:
-            try:
-                while True:
-                    i = next(list_iiif.url_iiif)
-                    print(i)
-
-                    #HERE
-                    # https://stackoverflow.com/questions/41659890/iterator-with-multithreading -> test multithreading (histoire d'en faire plusieurs en meme temps
-                    # https://towardsdatascience.com/combining-multiprocessing-and-asyncio-in-python-for-performance-boosts-15496ffe96b iterator and asyncio
-
-
-            except StopIteration:
-                pass
-
     else:
         raise FileExistsError("Sorry, your file need to be in csv or txt format.")
+
+    if kwargs['image']:
+        ParallelizeImage.run_image(urls=list_iiif.url_iiif, path=kwargs['directory'])
+    else:
+        try:
+            while True:
+                pass
+                #i = next(list_iiif.url_iiif)
+                #print(i)
+
+                #HERE
+                # https://stackoverflow.com/questions/41659890/iterator-with-multithreading -> test multithreading (histoire d'en faire plusieurs en meme temps
+                # https://towardsdatascience.com/combining-multiprocessing-and-asyncio-in-python-for-performance-boosts-15496ffe96b iterator and asyncio
+
+        except StopIteration:
+            pass
 
 
 @run_collect.command()
