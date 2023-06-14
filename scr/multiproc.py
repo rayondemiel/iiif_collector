@@ -36,8 +36,11 @@ class IIIFCollector:
 
 
 class ParallelizeImage(ConfigIIIF):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        pass
 
-    def process_chunk(self, chunk):
+    def _process_chunk(self, chunk):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         collector = IIIFCollector()
@@ -47,11 +50,10 @@ class ParallelizeImage(ConfigIIIF):
     def __get_cpu__(self):
         return max(2, multiprocessing.cpu_count() // 2)
 
-    @classmethod
-    def run_image(cls, urls):
+    def run_image(self, urls):
         start_time = time.time()  # Start time
         # Determine the number of processes
-        num_processes = cls.__get_cpu__()
+        num_processes = self.__get_cpu__()
         # Determine number chunk validity cpu count
         if len(urls) > num_processes:
             num_processes = len(urls)
@@ -63,7 +65,7 @@ class ParallelizeImage(ConfigIIIF):
 
         for chunk in url_chunks:
             # Create a process for each chunk
-            process = multiprocessing.Process(target=cls.process_chunk, args=(chunk,))
+            process = multiprocessing.Process(target=self._process_chunk, args=(chunk,))
             processes.append(process)
             process.start()
 
