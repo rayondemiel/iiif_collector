@@ -3,10 +3,10 @@ import os
 
 from scr.iiif import ManifestIIIF, ImageIIIF
 from scr.iiif_list import ListIIIF
+from scr.opt.terminal import prompt
 from scr.opt.utils import make_out_dirs
-#from scr.opt.terminal import prompt
 from scr.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
-from scr.multiproc import ParallelizeImage
+from scr.multiproc import ParallelizeIIIF
 
 
 # test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
@@ -179,7 +179,8 @@ def iiif_list(file, **kwargs):
         raise FileExistsError("Sorry, your file need to be in csv or txt format.")
 
     if kwargs['image']:
-        ParallelizeImage.run_image(urls=list_iiif.url_iiif, path=kwargs['directory'])
+        parallelization = ParallelizeIIIF()
+        parallelization.run_image(urls=list_iiif.url_iiif, path=kwargs['directory'])
     else:
         try:
             while True:
