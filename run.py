@@ -173,7 +173,11 @@ def iiif_list(file, **kwargs):
         #delimiter, header, encoding = prompt()
         #list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
                                #header=int(header))
-        list_iiif.read_csv(file, name_column, delimiter=";")
+        try:
+            list_iiif.read_csv(file, name_column, delimiter=";")
+        except KeyError:
+            print('Impossible to find the column. Please retake yours informations.')
+
 
     else:
         raise FileExistsError("Sorry, your file need to be in csv or txt format.")
