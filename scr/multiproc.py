@@ -1,16 +1,24 @@
 import asyncio
 import aiohttp
+import aiofiles
 import multiprocessing
 import time
 import psutil
+import os
 
-from .iiif import ImageIIIF, ManifestIIIF
+from .iiif import ImageIIIF, ManifestIIIF, ConfigIIIF
+from .variables import DEFAULT_OUT_DIR
 from scr.opt.performance import calculate_performance
 from scr.opt.utils import journal_error
 
-class IIIFCollector:
-    def __init__(self):
+
+class IIIFCollector(object):
+
+    def __init__(self, path, image=False, **kwargs):
+        self.path = path
+        self.image = image
         self.session = None
+        self.verbose = kwargs.get('verbose', False)
 
     async def process_manifest(self, session, url):
         async with session.get(url) as response:
@@ -18,19 +26,19 @@ class IIIFCollector:
             response_data = await response.json()
             return response_data  # Return the processed data asynchronously
 
-    async def process_urls(self, session, path, urls, image=False, **kwargs):    ## HERE
+    async def process_urls(self, session, urls):
         # Create tasks for each URL
-        if image is False:
+        if self.image is False:
             tasks = [self.process_manifest(session, url) for url in urls]
         else:
-            tasks = [ImageIIIFAsync(url, path, verbose=kwargs['verbose']).load_image_async(session, filename=) for url in urls]
+            tasks = [ImageIIIFAsync(url, path=os.path.join(self.path, 'image_IIIF')).load_image_async(session, filename=None) for url in urls]
 
         # Wait for all tasks to complete
         results = await asyncio.gather(*tasks)
 
         # Process the results
         for result in results:
-            if image:
+            if self.image:
                 pass
             else:
                 ok = result
@@ -39,12 +47,15 @@ class IIIFCollector:
         # Create an aiohttp.ClientSession within the context of an async with statement
         # This ensures the session is properly closed
         async with aiohttp.ClientSession() as session:
+            self.session = session
             await self.process_urls(session, urls)
 
 
-class ImageIIIFAsync(ImageIIIF, IIIFCollector):
+class ImageIIIFAsync(ImageIIIF):
+    def __init__(self, url, path, verbose=False):
+        super().__init__(url=url, path=path, verbose=verbose)
 
-    async def load_image_async(self, session, filename):    ## HERE
+    async def load_image_async(self, session, filename):  ## HERE
         url = self._format_url(self.url)
         if self.verbose:
             print(url)
@@ -53,11 +64,16 @@ class ImageIIIFAsync(ImageIIIF, IIIFCollector):
             self.id_img = self.__get_id__(url.split('/')[-5])
         async with session.get(url) as response:
             try:
-                self.img = await response
+                self.img = response
                 # Process the response data asynchronously
-                if 200 <= self.img.status_code < 400:
+                if 200 <= self.img.status < 400:
                     if ImageIIIF.verbose:
                         print(f"Succesing request image {str(self.id_img)} to {url}")
+                    # Download image
+                    async with aiofiles.open(os.path.join(self.out_dir, self.id_img + "." + self.config['format']), mode='wb') as f:
+                        await f.write(await response.read())
+                    if self.verbose:
+                        print(' * saving', self.out_dir)
                 else:
                     print(f"error request, {url}, {self.img.status_code}")
                     journal_error(self.out_dir, url=url, error=self.img.status_code)
@@ -65,15 +81,24 @@ class ImageIIIFAsync(ImageIIIF, IIIFCollector):
             except Exception as err:
                 print(err)
 
-class ParallelizeIIIF:
+
+class ParallelizeIIIF(ConfigIIIF):
     processes = []
-    def __init__(self):
+
+    def __init__(self, urls, path, image=False, **kwargs):
+        super().__init__(**kwargs)
         self.num_processes = self._get_cpu()
+        self.urls = urls
+        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
+        self.image = image
 
     def _process_chunk(self, chunk):
+        """
+        :chunck: list, chunk of all urls (manifest or image)
+        """
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        collector = IIIFCollector()
+        collector = IIIFCollector(path=self.out_dir, image=self.image, verbose=self.verbose)
         loop.run_until_complete(collector.run_async(chunk))
         loop.close()
 
@@ -81,28 +106,28 @@ class ParallelizeIIIF:
         """Determine the number of processes"""
         return max(2, multiprocessing.cpu_count() // 2)
 
-    def run_image(self, urls, **kwargs):
+    def run_image(self):
         start_time = time.time()  # Start time
-        # Determine number chunk validity cpu count
-        if len(urls) > self.num_processes:
-            num_processes = len(urls)
-        # Split the URLs among processes
-        url_chunks = [urls[i::self.num_processes] for i in range(self.num_processes)]
-
-
-        for chunk in url_chunks:
-            # Create a process for each chunk
-            process = multiprocessing.Process(target=self._process_chunk, args=(chunk,))
-            self.processes.append(process)
-            process.start()
-
-        # Measure CPU and memory usage during execution
+        # Variable for cpu and memory
         cpu_percent = []
         memory_usage = []
 
-        while any(process.is_alive() for process in self.processes):
-            cpu_percent.append(psutil.cpu_percent())
-            memory_usage.append(psutil.virtual_memory().percent)
+        # Determine number chunk validity cpu count
+        if len(self.urls) > self.num_processes:
+            num_processes = len(self.urls)
+        # Split the URLs among processes
+        url_chunks = [self.urls[i::self.num_processes] for i in range(self.num_processes)]
+
+        for chunk in url_chunks:
+            # Create a process for each chunk
+            process = multiprocessing.Process(target=self._process_chunk, args=(chunk, ))
+            self.processes.append(process)
+            process.start()
+
+            # Measure CPU and memory usage during execution
+            while any(process.is_alive() for process in self.processes):
+                cpu_percent.append(psutil.cpu_percent())
+                memory_usage.append(psutil.virtual_memory().percent)
 
         # Wait for all processes to finish
         for process in self.processes:

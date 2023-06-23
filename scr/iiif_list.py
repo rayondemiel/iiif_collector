@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-class ListIIIF:
+class ListIIIF(object):
     url_iiif = []
     len_iiif = 0
 

@@ -87,7 +87,7 @@ def iiif_singular(url, **kwargs):
                                   size=kwargs['width'],
                                   rotation=kwargs['rotation'],
                                   quality=kwargs['quality'],
-                                  format=kwargs['format'],
+                                  format=kwargs['format']
                                   )
         # To get and download image
         image.load_image()
@@ -179,8 +179,15 @@ def iiif_list(file, **kwargs):
         raise FileExistsError("Sorry, your file need to be in csv or txt format.")
 
     if kwargs['image']:
-        parallelization = ParallelizeIIIF()
-        parallelization.run_image(urls=list_iiif.url_iiif, path=kwargs['directory'])
+        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path, image=True, verbose=kwargs['verbose'])
+        # API parameters
+        parallelization.image_configuration(region=kwargs['region'],
+                                            size=kwargs['width'],
+                                            rotation=kwargs['rotation'],
+                                            quality=kwargs['quality'],
+                                            format=kwargs['format'])
+        make_out_dirs(parallelization.out_dir, api=True)
+        parallelization.run_image()
     else:
         try:
             while True:
