@@ -141,6 +141,7 @@ def iiif_singular(url, **kwargs):
               help="To active selection of images to save by manifest")
 @click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
                                                                   "number indicated")
+@click.option("--case-insensitive", "case-insensitive", type=bool, is_flag=True, help="To disabled case sensitive for the name of your column (csv)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def iiif_list(file, **kwargs):
     """
@@ -161,7 +162,7 @@ def iiif_list(file, **kwargs):
         current_path = os.path.join(current_path, kwargs['directory'])
 
     # Parsing file
-    list_iiif = ListIIIF()
+    list_iiif = ListIIIF(kwargs['case-insensitive'])
     if file.endswith('.txt'):
         list_iiif.read_txt(file)
     elif file.endswith('.csv'):
