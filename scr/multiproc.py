@@ -83,14 +83,17 @@ class ParallelizeIIIF(ConfigIIIF):
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
         self.image = image
 
-    def _process_chunk(self, chunk):
+    def _process_chunk(self, chunk, image=False):
         """
         :chunck: list, chunk of all urls (manifest or image)
         """
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        collector = IIIFCollector(path=self.out_dir, image=self.image, verbose=self.verbose)
-        loop.run_until_complete(collector.run_async(chunk))
+        collector = IIIFCollector(path=self.out_dir, verbose=self.verbose)
+        if image:
+            asyncio.run(collector.run_async(chunk))
+        else:
+            asyncio.run(collector.process_manifest(chunk))
         loop.close()
 
     def _get_cpu(self):
@@ -127,3 +130,35 @@ class ParallelizeIIIF(ConfigIIIF):
         # Determine resource and time consumption
         end_time = time.time()
         calculate_performance(start_time, end_time, cpu_percent, memory_usage)
+
+    def run_manifest(self):
+        start_time = time.time()  # Start time
+        # Variable for cpu and memory
+        cpu_percent = []
+        memory_usage = []
+
+        # Determine number chunk validity cpu count
+        if len(self.urls) > self.num_processes:
+            num_processes = len(self.urls)
+        # Split the URLs among processes
+        url_chunks = [self.urls[i::self.num_processes] for i in range(self.num_processes)]
+
+        for chunk in url_chunks:
+            # Create a process for each chunk
+            process = multiprocessing.Process(target=self._process_chunk, args=(chunk,))
+            self.processes.append(process)
+            process.start()
+
+            # Measure CPU and memory usage during execution
+            while any(process.is_alive() for process in self.processes):
+                cpu_percent.append(psutil.cpu_percent())
+                memory_usage.append(psutil.virtual_memory().percent)
+
+        # Wait for all processes to finish
+        for process in self.processes:
+            process.join()
+
+        # Determine resource and time consumption
+        end_time = time.time()
+        calculate_performance(start_time, end_time, cpu_percent, memory_usage)
+

@@ -7,7 +7,7 @@ class ListIIIF(object):
 
     def __init__(self, **kwargs):
         self.verbose = kwargs.get('verbose', False)
-        self.case = kwargs.get('case-insensitive', False)
+        self.case = kwargs.get('case_insensitive', False)
     def __len__(self):
         return len(self.url_iiif)
 

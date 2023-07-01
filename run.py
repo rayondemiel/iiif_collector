@@ -141,7 +141,7 @@ def iiif_singular(url, **kwargs):
               help="To active selection of images to save by manifest")
 @click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
                                                                   "number indicated")
-@click.option("--case-insensitive", "case-insensitive", type=bool, is_flag=True, help="To disabled case sensitive for the name of your column (csv)")
+@click.option("--case-insensitive", "case_insensitive", type=bool, is_flag=True, help="To disabled case sensitive for the name of your column (csv)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def iiif_list(file, **kwargs):
     """
@@ -162,7 +162,7 @@ def iiif_list(file, **kwargs):
         current_path = os.path.join(current_path, kwargs['directory'])
 
     # Parsing file
-    list_iiif = ListIIIF(kwargs['case-insensitive'])
+    list_iiif = ListIIIF(case_insensitive=kwargs['case_insensitive'], verbose=kwargs['verbose'])
     if file.endswith('.txt'):
         list_iiif.read_txt(file)
     elif file.endswith('.csv'):
@@ -194,18 +194,16 @@ def iiif_list(file, **kwargs):
         make_out_dirs(parallelization.out_dir, api=True)
         parallelization.run_image()
     else:
-        try:
-            while True:
-                pass
-                #i = next(list_iiif.url_iiif)
-                #print(i)
-
-                #HERE
-                # https://stackoverflow.com/questions/41659890/iterator-with-multithreading -> test multithreading (histoire d'en faire plusieurs en meme temps
-                # https://towardsdatascience.com/combining-multiprocessing-and-asyncio-in-python-for-performance-boosts-15496ffe96b iterator and asyncio
-
-        except StopIteration:
-            pass
+        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path, image=True,
+                                          verbose=kwargs['verbose'])
+        # API parameters
+        parallelization.image_configuration(region=kwargs['region'],
+                                            size=kwargs['width'],
+                                            rotation=kwargs['rotation'],
+                                            quality=kwargs['quality'],
+                                            format=kwargs['format'])
+        make_out_dirs(parallelization.out_dir, api=True)
+        parallelization.run_manifest()
 
 
 @run_collect.command()
