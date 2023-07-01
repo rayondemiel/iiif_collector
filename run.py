@@ -171,14 +171,12 @@ def iiif_list(file, **kwargs):
         print(f"delimiter : {DEFAULT_CSV[0]}")
         print(f"header : {DEFAULT_CSV[1]}")
         print(f"encoding: {DEFAULT_CSV[2]}")
-        #delimiter, header, encoding = prompt()
-        #list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
-                               #header=int(header))
+        delimiter, header, encoding = prompt()
         try:
-            list_iiif.read_csv(file, name_column, delimiter=";")
+            list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
+                               header=int(header))
         except KeyError:
             print('Impossible to find the column. Please retake yours informations.')
-
 
     else:
         raise FileExistsError("Sorry, your file need to be in csv or txt format.")
@@ -192,9 +190,9 @@ def iiif_list(file, **kwargs):
                                             quality=kwargs['quality'],
                                             format=kwargs['format'])
         make_out_dirs(parallelization.out_dir, api=True)
-        parallelization.run_image()
+        parallelization.run()
     else:
-        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path, image=True,
+        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path,
                                           verbose=kwargs['verbose'])
         # API parameters
         parallelization.image_configuration(region=kwargs['region'],
@@ -202,8 +200,7 @@ def iiif_list(file, **kwargs):
                                             rotation=kwargs['rotation'],
                                             quality=kwargs['quality'],
                                             format=kwargs['format'])
-        make_out_dirs(parallelization.out_dir, api=True)
-        parallelization.run_manifest()
+        parallelization.run()
 
 
 @run_collect.command()
