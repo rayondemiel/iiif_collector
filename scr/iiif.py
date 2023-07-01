@@ -165,7 +165,7 @@ class ManifestIIIF(ConfigIIIF):
     images = []
     list_image_txt = OUTPUT_LIST_TXT
 
-    def __init__(self, url: str, path: str, **kwargs):
+    def __init__(self, url: str, path: str, session=None, **kwargs):
         """
         Class treating a manifest IIIF
 
@@ -179,7 +179,10 @@ class ManifestIIIF(ConfigIIIF):
         self.url = url
         self.n = kwargs.get('n')
         self.random = kwargs.get('random', False)
-        self._load_from_url(url)
+        if session is not None:
+            self._load_async_manifests(url, session)
+        else:
+            self._load_from_url(url)
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR, self.title)
         if os.path.isdir(self.out_dir) is False:
             os.makedirs(self.out_dir)
@@ -197,6 +200,14 @@ class ManifestIIIF(ConfigIIIF):
         self.id = self.json.get('@id', '').removeprefix("https://").replace("manifest/", "").replace('/', '_').rstrip(
             '.json')
         self.title = self._get_title()
+
+    async def _load_async_manifests(self, url, session):
+        async with session.get(url) as response:
+            self.json = await response.json()
+            self.id = self.json.get('@id', '').removeprefix("https://").replace("manifest/", "").replace('/',
+                                                                                                         '_').rstrip(
+                '.json')
+            self.title = self._get_title()
 
     def _json_present(self) -> bool:
         """

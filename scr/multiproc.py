@@ -20,35 +20,26 @@ class IIIFCollector(object):
         self.session = None
         self.verbose = kwargs.get('verbose', False)
 
-    async def process_manifest(self, session, url):
-        async with session.get(url) as response:
-            # Process the response data asynchronously
-            response_data = await response.json()
-            return response_data  # Return the processed data asynchronously
-
-    async def process_urls(self, session, urls):
+    async def process_urls(self, urls):
         # Create tasks for each URL
-        if self.image is False:
-            tasks = [self.process_manifest(session, url) for url in urls]
-        else:
-            tasks = [ImageIIIFAsync(url, path=os.path.join(self.path, 'image_IIIF')).load_image_async(session, filename=None) for url in urls]
-
+        tasks = [ImageIIIFAsync(url, path=os.path.join(self.path, 'image_IIIF')).load_image_async(self.session, filename=None) for url in urls]
         # Wait for all tasks to complete
-        results = await asyncio.gather(*tasks)
+        await asyncio.gather(*tasks)
 
-        # Process the results
-        for result in results:
-            if self.image:
-                pass
-            else:
-                ok = result
+    async def process_manifest(self, urls):
+        tasks_manifest = [ManifestIIIF(url=url, path=os.path.join(self.path, 'image_IIIF')) for url in urls]
+        results = await asyncio.gather(*tasks_manifest)
+
+        """# Process the results
+        for manifest in results:
+            print(type(manifest))"""
 
     async def run_async(self, urls):
         # Create an aiohttp.ClientSession within the context of an async with statement
         # This ensures the session is properly closed
         async with aiohttp.ClientSession() as session:
             self.session = session
-            await self.process_urls(session, urls)
+            await self.process_urls(urls)
 
 
 class ImageIIIFAsync(ImageIIIF):
