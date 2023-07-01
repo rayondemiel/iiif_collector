@@ -5,6 +5,8 @@ import multiprocessing
 import time
 import psutil
 import os
+import sys
+from tqdm import tqdm
 
 from .iiif import ImageIIIF, ManifestIIIF, ConfigIIIF
 from .variables import DEFAULT_OUT_DIR
@@ -145,24 +147,27 @@ class ParallelizeIIIF(ConfigIIIF):
             self.num_processes = len(self.urls)
         # Split the URLs among processes
         url_chunks = [self.urls[i::self.num_processes] for i in range(self.num_processes)]
+        with tqdm(total=len(url_chunks), desc="Downloading Images", unit="%",
+                  ncols=80, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
+            for chunk in url_chunks:
+                # Create a process for each chunk
+                if self.image:
+                    process = multiprocessing.Process(target=self._process_chunk_image, args=(chunk,))
+                else:
+                    process = multiprocessing.Process(target=self._process_chunk_manifest, args=(chunk,))
+                self.processes.append(process)
+                process.start()
 
-        for chunk in url_chunks:
-            # Create a process for each chunk
-            if self.image:
-                process = multiprocessing.Process(target=self._process_chunk_image, args=(chunk,))
-            else:
-                process = multiprocessing.Process(target=self._process_chunk_manifest, args=(chunk,))
-            self.processes.append(process)
-            process.start()
+                # Measure CPU and memory usage during execution
+                while any(process.is_alive() for process in self.processes):
+                    cpu_percent.append(psutil.cpu_percent())
+                    memory_usage.append(psutil.virtual_memory().percent)
 
-            # Measure CPU and memory usage during execution
-            while any(process.is_alive() for process in self.processes):
-                cpu_percent.append(psutil.cpu_percent())
-                memory_usage.append(psutil.virtual_memory().percent)
-
-        # Wait for all processes to finish
-        for process in self.processes:
-            process.join()
+            # Wait for all processes to finish
+            for process in self.processes:
+                process.join()
+                pbar.update(1)
+                sys.stdout.flush()
 
         # Determine resource and time consumption
         end_time = time.time()
