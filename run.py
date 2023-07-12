@@ -3,9 +3,10 @@ import os
 
 from scr.iiif import ManifestIIIF, ImageIIIF
 from scr.iiif_list import ListIIIF
+from scr.opt.terminal import prompt
 from scr.opt.utils import make_out_dirs
-#from scr.opt.terminal import prompt
 from scr.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
+from scr.multiproc import ParallelizeIIIF
 
 
 # test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
@@ -86,7 +87,7 @@ def iiif_singular(url, **kwargs):
                                   size=kwargs['width'],
                                   rotation=kwargs['rotation'],
                                   quality=kwargs['quality'],
-                                  format=kwargs['format'],
+                                  format=kwargs['format']
                                   )
         # To get and download image
         image.load_image()
@@ -142,6 +143,7 @@ def iiif_singular(url, **kwargs):
               help="To active selection of images to save by manifest")
 @click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
                                                                   "number indicated")
+@click.option("--case-insensitive", "case_insensitive", type=bool, is_flag=True, help="To disabled case sensitive for the name of your column (csv)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def iiif_list(file, **kwargs):
     """
@@ -162,7 +164,7 @@ def iiif_list(file, **kwargs):
         current_path = os.path.join(current_path, kwargs['directory'])
 
     # Parsing file
-    list_iiif = ListIIIF()
+    list_iiif = ListIIIF(case_insensitive=kwargs['case_insensitive'], verbose=kwargs['verbose'])
     if file.endswith('.txt'):
         list_iiif.read_txt(file)
     elif file.endswith('.csv'):
@@ -172,26 +174,35 @@ def iiif_list(file, **kwargs):
         print(f"header : {DEFAULT_CSV[1]}")
         print(f"encoding: {DEFAULT_CSV[2]}")
         delimiter, header, encoding = prompt()
-        list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
+        try:
+            list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
                                header=int(header))
-
-        if kwargs['image']:
-            pass
-        else:
-            try:
-                while True:
-                    i = next(list_iiif.url_iiif)
-
-                    #HERE
-                    # https://stackoverflow.com/questions/41659890/iterator-with-multithreading -> test multithreading (histoire d'en faire plusieurs en meme temps
-
-
-
-            except StopIteration:
-                pass
+        except KeyError:
+            print('Impossible to find the column. Please retake yours informations.')
 
     else:
         raise FileExistsError("Sorry, your file need to be in csv or txt format.")
+
+    if kwargs['image']:
+        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path, image=True, verbose=kwargs['verbose'])
+        # API parameters
+        parallelization.image_configuration(region=kwargs['region'],
+                                            size=kwargs['width'],
+                                            rotation=kwargs['rotation'],
+                                            quality=kwargs['quality'],
+                                            format=kwargs['format'])
+        make_out_dirs(parallelization.out_dir, api=True)
+        parallelization.run()
+    else:
+        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path,
+                                          verbose=kwargs['verbose'])
+        # API parameters
+        parallelization.image_configuration(region=kwargs['region'],
+                                            size=kwargs['width'],
+                                            rotation=kwargs['rotation'],
+                                            quality=kwargs['quality'],
+                                            format=kwargs['format'])
+        parallelization.run()
 
 
 @run_collect.command()
