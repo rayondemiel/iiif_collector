@@ -16,7 +16,7 @@ Le script fonctionne sur les environnements Linux/Mac et en cours de test pour W
 
 #### Fonctionnalités:
 - iiif_singular: Fonction pour télécharger une image ou un manifeste IIIF.
-- iiif_list: Fonction pour exploiter une liste (csv ou txt) d'images ou de manifestes IIIF.
+- iiif_list: Fonction pour exploiter une liste (csv ou txt) d'images ou de manifestes IIIF. Le traitement est parallélisé et effectué à partir de requêtes asynchrones.
 - get_list_image: Fonction pour obtenir la liste des liens urls pour les images présentes au sein d'un manifeste.
 
 ---
@@ -25,11 +25,11 @@ Le script fonctionne sur les environnements Linux/Mac et en cours de test pour W
 
 *Nota : commandes à exécuter dans le terminal (Linux ou macOS).*
 
-  * Cloner le dossier : ```git clone https://github.com/rayondemiel/iiif_collector.git``` ou télécharger le [zip](https://github.com/rayondemiel/iiif_collector/archive/refs/heads/main.zip) et décompresser le
+  * Cloner le dossier : ```git clone https://github.com/rayondemiel/iiif_collector.git``` ou télécharger le [zip](https://github.com/rayondemiel/iiif_collector/archive/refs/heads/main.zip) et décompressez-le.
   
   * Installer l'environnement virtuel :
   
-    * Vérifier que la version de Python est bien 3.x et dans l'idéal 3.10 : ```python --version```;
+    * Vérifier que la version de Python est bien 3.x et dans l'idéal la version 3.10 : ```python --version```;
     
     * Si vous ne possédez pas python, veuillez exécuter cette commande :
       - Linux/Debian ``` sudo apt-get install python3 python3-pip python3-virtualenv ```;
@@ -45,8 +45,39 @@ Le script fonctionne sur les environnements Linux/Mac et en cours de test pour W
     
     * Installer les différentes librairies ```pip install -r requirements.txt```;
     
-    * Installer les dépendances pour le NLP ```python -m nltk.downloader stopwords```;
-    
     * Vérifier que tout est installé : ```pip freeze``` ;
     
     * Sortir de l'environnement : ```deactivate``` .
+---
+
+## :rocket: Lancement
+  
+  * Activer l'environnement : ```source [nom de l'environnement]/bin/activate``` ;
+    
+  * Lancement : ```python3 run.py [fonction] [Image URL | Manifeste URL | CSV or TXT] --kwargs```
+
+### Examples
+
+##### iiif_singular
+
+  * Téléchargement d'une image sur une zone particulière en qualité bitonal:
+    
+  ```python3 run.py iiif_singular -i https://examples.org/iiif/3/full/max/0/default.jpg -R 125,15,120,140 -q bitonal```
+
+  * Téléchargement d'un nombre défini d'images aléatoires au format TIFF dans un dossier spécifique:
+
+  ```python3 run.py iiif_singular https://examples.org/iiif/manuscrit_fake/manifest.json -n --random -f tif -d PATH/TO/DIR/```
+
+##### iiif_singular
+  
+  * Téléchargement de 100 manifestes IIIF au sein d'un fichier texte avec pour format png et une nouvelle dimension
+  
+  ```python3 run.py iiif_list /PATH/TO/manifest.txt -f png -w 150,```
+
+##### get_list_image
+
+  * Obtenir une liste des images présentes au sein d'un manifeste IIIF.
+  
+  ```python3 run.py get_list_image https://examples.org/iiif/manuscrit_fake/manifest.json```
+
+  
