@@ -115,6 +115,7 @@ class ParallelizeIIIF(ConfigIIIF):
         if image is False:
             self.out_dir = path
             self.n = kwargs.get('n')
+            print(self.n)
             self.random = kwargs.get('random', False)
 
     def _process_chunk_image(self, chunk):
@@ -135,8 +136,10 @@ class ParallelizeIIIF(ConfigIIIF):
         """
         for url in chunk:
             manifest = ManifestIIIF(str(url), path=self.out_dir, n=self.n, verbose=self.verbose, random=self.random)
+            # make dir
             self.out_dir = manifest.out_dir
             make_out_dirs(self.out_dir)
+            # config api image
             manifest.config = self.config
             if self.verbose:
                 print("Creating directory to IIIF files")

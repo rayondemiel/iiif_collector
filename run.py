@@ -195,7 +195,7 @@ def iiif_list(file, **kwargs):
         parallelization.run()
     else:
         parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path,
-                                          verbose=kwargs['verbose'])
+                                          verbose=kwargs['verbose'], n=n, random=kwargs['random'])
         # API parameters
         parallelization.image_configuration(region=kwargs['region'],
                                             size=kwargs['width'],
