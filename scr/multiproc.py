@@ -68,7 +68,7 @@ class ImageIIIFAsync(ImageIIIF):
             # Retry variables
             max_retries = 3
             n_retries = 1
-            retry_delay = 15
+            retry_delay = 5
 
             for retry_count in range(n_retries + 1):
                 try:
@@ -115,7 +115,6 @@ class ParallelizeIIIF(ConfigIIIF):
         if image is False:
             self.out_dir = path
             self.n = kwargs.get('n')
-            print(self.n)
             self.random = kwargs.get('random', False)
 
     def _process_chunk_image(self, chunk):
@@ -153,7 +152,8 @@ class ParallelizeIIIF(ConfigIIIF):
                 urls = urls[:min(self.n, len(urls) - 1)]
             self._process_chunk_image(urls)
 
-    def _get_cpu(self):
+    @staticmethod
+    def _get_cpu():
         """Determine the number of processes"""
         return max(2, multiprocessing.cpu_count() // 2)
 
