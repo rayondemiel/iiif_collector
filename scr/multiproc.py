@@ -168,27 +168,43 @@ class ParallelizeIIIF(ConfigIIIF):
             self.num_processes = len(self.urls)
         # Split the URLs among processes
         url_chunks = [self.urls[i::self.num_processes] for i in range(self.num_processes)]
-        with tqdm(total=len(url_chunks), desc="Downloading Images", unit="%",
-                  ncols=80, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
+
+        # Shared counter for tracking processed URLs
+        manager = multiprocessing.Manager()
+        counter = manager.Value('i', 0)
+
+        # Function to process a chunk
+        def process_chunk(chunk):
+            if self.image:
+                self._process_chunk_image(chunk)
+            else:
+                self._process_chunk_manifest(chunk)
+            # Update the shared counter after processing the chunk
+            counter.value += len(chunk)
+
+        with tqdm(total=len(self.urls), desc="Downloading Images", unit="%",
+                  ncols=80, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}\n') as pbar:
+            processes = []
             for chunk in url_chunks:
                 # Create a process for each chunk
-                if self.image:
-                    process = multiprocessing.Process(target=self._process_chunk_image, args=(chunk,))
-                else:
-                    process = multiprocessing.Process(target=self._process_chunk_manifest, args=(chunk,))
-                self.processes.append(process)
+                process = multiprocessing.Process(target=process_chunk, args=(chunk,))
+                processes.append(process)
                 process.start()
 
-                # Measure CPU and memory usage during execution
-                while any(process.is_alive() for process in self.processes):
-                    cpu_percent.append(psutil.cpu_percent())
-                    memory_usage.append(psutil.virtual_memory().percent)
+            # Measure CPU and memory usage during execution
+            while any(process.is_alive() for process in processes):
+                cpu_percent.append(psutil.cpu_percent())
+                memory_usage.append(psutil.virtual_memory().percent)
+
+                # Update the progress bar with the current value of the shared counter
+                pbar.update(counter.value - pbar.n)
+
+                # Flush the output to display the updated progress bar immediately
+                sys.stdout.flush()
 
             # Wait for all processes to finish
-            for process in self.processes:
+            for process in processes:
                 process.join()
-                pbar.update(1)
-                sys.stdout.flush()
 
         # Determine resource and time consumption
         end_time = time.time()
