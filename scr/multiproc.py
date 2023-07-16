@@ -65,24 +65,42 @@ class ImageIIIFAsync(ImageIIIF):
             self.id_img = self.__get_id__(url.split('/')[-5])
         else:
             self.id_img = filename
-        async with session.get(url) as response:
-            try:
-                self.img = response
-                # Process the response data asynchronously
-                if 200 <= self.img.status < 400:
-                    if ImageIIIF.verbose:
-                        print(f"Succesing request image {str(self.id_img)} to {url}")
-                    # Download image
-                    async with aiofiles.open(os.path.join(self.out_dir, self.id_img + "." + self.config['format']), mode='wb') as f:
-                        await f.write(await response.read())
+            # Retry variables
+            max_retries = 3
+            n_retries = 1
+            retry_delay = 15
+
+            for retry_count in range(n_retries + 1):
+                try:
+                    async with session.get(url) as response:
+                        if 200 <= response.status < 400:
+                            # Process the response data
+                            if self.verbose:
+                                print(f"Processing image {self.id_img} from {url}")
+                            async with aiofiles.open(
+                                    os.path.join(self.out_dir, self.id_img + "." + self.config['format']),
+                                    mode='wb') as f:
+                                await f.write(await response.read())
+                            if self.verbose:
+                                print(' * saving', self.out_dir)
+                            break  # Successful response, exit the retry loop
+                        else:
+                            print(f"Error processing URL: {url}. Status code: {response.status}")
+                            if retry_count < max_retries:
+                                print(f"Retrying after a delay...")
+                                await asyncio.sleep(retry_delay)
+                            else:
+                                journal_error(self.out_dir, url=url, error=response.status)
+                except aiohttp.ClientError:
                     if self.verbose:
-                        print(' * saving', self.out_dir)
-                else:
-                    print(f"error request, {url}, {self.img.status_code}")
-                    journal_error(self.out_dir, url=url, error=self.img.status_code)
-                    pass
-            except Exception as err:
-                print(err)
+                        print(f"Error processing URL: {url}. Retrying after a delay...")
+                    if retry_count < max_retries:
+                        await asyncio.sleep(retry_delay)
+                    else:
+                        journal_error(self.out_dir, url=url, error="ClientError")
+                except Exception as err:
+                    print(f"Error processing URL: {url}. Exception: {err}")
+                    journal_error(self.out_dir, url=url, error=str(err))
 
 
 class ParallelizeIIIF(ConfigIIIF):
