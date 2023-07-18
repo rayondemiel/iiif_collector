@@ -255,18 +255,22 @@ class ManifestIIIF(ConfigIIIF):
 
         if self._json_present():
             images = self.get_images_from_manifest()
-            if self.random is True and self.n is not None:
+            if self.random and self.n is not None:
                 images = randomized(images, self.n)
-            elif self.random is False and self.n is not None:
-                images = images[:min(self.n, len(images) - 1)]
-            for url, filename in tqdm.tqdm(images):
-                image = ImageIIIF(url, self.out_dir)
-                image.config = self.config
-                if self.session is not None:
-                    image.load_image(filename=filename, session=self.session)
-                else:
-                    image.load_image(filename=filename)
-                image.save_image()
+            elif not self.random and self.n is not None:
+                images = zip(images, range(min(self.n, len(images) - 1)))
+
+            with tqdm.tqdm(total=len(list(images)), desc='Saving images', unit='image') as pbar:
+                for url, filename in images:
+                    image = ImageIIIF(url, self.out_dir)
+                    image.config = self.config
+                    if self.session is not None:
+                        image.load_image(filename=filename, session=self.session)
+                    else:
+                        image.load_image(filename=filename)
+                    image.save_image()
+                    pbar.update(1)
+
             if self.verbose:
                 print('Finish to save image !')
 
