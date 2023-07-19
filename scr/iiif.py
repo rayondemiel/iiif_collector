@@ -83,7 +83,7 @@ class ImageIIIF(ConfigIIIF):
     def __str__(self):
         print(f"URL api image is : {self.url}")
 
-    def load_image(self, filename=None):
+    def load_image(self, session=None, filename=None):
         """Load a IIIF image from a url"""
         url = self._format_url(self.url)
         if self.verbose:
@@ -94,7 +94,13 @@ class ImageIIIF(ConfigIIIF):
         else:
             self.id_img = filename
         try:
-            self.img = requests.get(url, stream=True, allow_redirects=True)
+            #Check session
+            if session is None:
+                self.img = requests.get(url, stream=True, allow_redirects=True)
+            else:
+                assert type(session) == requests.Session, "Session need to be instanced"
+                self.img = session.get(url, stream=True, allow_redirects=True)
+            # Check status request
             if 200 <= self.img.status_code < 400:
                 if ImageIIIF.verbose:
                     print(f"Succesing request image {str(self.id_img)} to {url}")
@@ -165,18 +171,20 @@ class ManifestIIIF(ConfigIIIF):
     images = []
     list_image_txt = OUTPUT_LIST_TXT
 
-    def __init__(self, url: str, path: str, **kwargs):
+    def __init__(self, url: str, path: str, session=None, **kwargs):
         """
         Class treating a manifest IIIF
 
         :param url: str, URI of a manifest
         :param path: directory to save datas and metadatas
+        :param session: Session class in requests lib for build pool connection.
         :param kwargs: verbose : bool
                         n : int, Desired number of images to download
                         random: bool, to randomize image. Best to prepare htr corpus. Default in False
         """
         super().__init__(**kwargs)
         self.url = url
+        self.session = session
         self.n = kwargs.get('n')
         self.random = kwargs.get('random', False)
         self._load_from_url(url)
@@ -193,7 +201,11 @@ class ManifestIIIF(ConfigIIIF):
         """
         if self.verbose:
             print(' * loading manifest from url', url)
-        self.json = requests.get(url).json()
+        if self.session is not None:
+            assert type(self.session) == requests.Session, "Session need to be instanced"
+            self.json = self.session.get(url).json()
+        else:
+            self.json = requests.get(url).json()
         self.id = self.json.get('@id', '').removeprefix("https://").replace("manifest/", "").replace('/', '_').rstrip(
             '.json')
         self.title = self._get_title()
@@ -243,16 +255,22 @@ class ManifestIIIF(ConfigIIIF):
 
         if self._json_present():
             images = self.get_images_from_manifest()
-            if self.random is True and self.n is not None:
+            if self.random and self.n is not None:
                 images = randomized(images, self.n)
-            elif self.random is False and self.n is not None:
-                images = images[:min(self.n, len(images) - 1)]
-            for url, filename in tqdm.tqdm(images):
-                print(filename)
-                image = ImageIIIF(url, self.out_dir)
-                image.config = self.config
-                image.load_image(filename=filename)
-                image.save_image()
+            elif not self.random and self.n is not None:
+                images = zip(images, range(min(self.n, len(images) - 1)))
+
+            with tqdm.tqdm(total=len(list(images)), desc='Saving images', unit='image') as pbar:
+                for url, filename in images:
+                    image = ImageIIIF(url, self.out_dir)
+                    image.config = self.config
+                    if self.session is not None:
+                        image.load_image(filename=filename, session=self.session)
+                    else:
+                        image.load_image(filename=filename)
+                    image.save_image()
+                    pbar.update(1)
+
             if self.verbose:
                 print('Finish to save image !')
 

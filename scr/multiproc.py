@@ -65,24 +65,42 @@ class ImageIIIFAsync(ImageIIIF):
             self.id_img = self.__get_id__(url.split('/')[-5])
         else:
             self.id_img = filename
-        async with session.get(url) as response:
-            try:
-                self.img = response
-                # Process the response data asynchronously
-                if 200 <= self.img.status < 400:
-                    if ImageIIIF.verbose:
-                        print(f"Succesing request image {str(self.id_img)} to {url}")
-                    # Download image
-                    async with aiofiles.open(os.path.join(self.out_dir, self.id_img + "." + self.config['format']), mode='wb') as f:
-                        await f.write(await response.read())
+            # Retry variables
+            max_retries = 3
+            n_retries = 1
+            retry_delay = 5
+
+            for retry_count in range(n_retries + 1):
+                try:
+                    async with session.get(url) as response:
+                        if 200 <= response.status < 400:
+                            # Process the response data
+                            if self.verbose:
+                                print(f"Processing image {self.id_img} from {url}")
+                            async with aiofiles.open(
+                                    os.path.join(self.out_dir, self.id_img + "." + self.config['format']),
+                                    mode='wb') as f:
+                                await f.write(await response.read())
+                            if self.verbose:
+                                print(' * saving', self.out_dir)
+                            break  # Successful response, exit the retry loop
+                        else:
+                            print(f"Error processing URL: {url}. Status code: {response.status}")
+                            if retry_count < max_retries:
+                                print(f"Retrying after a delay...")
+                                await asyncio.sleep(retry_delay)
+                            else:
+                                journal_error(self.out_dir, url=url, error=response.status)
+                except aiohttp.ClientError:
                     if self.verbose:
-                        print(' * saving', self.out_dir)
-                else:
-                    print(f"error request, {url}, {self.img.status_code}")
-                    journal_error(self.out_dir, url=url, error=self.img.status_code)
-                    pass
-            except Exception as err:
-                print(err)
+                        print(f"Error processing URL: {url}. Retrying after a delay...")
+                    if retry_count < max_retries:
+                        await asyncio.sleep(retry_delay)
+                    else:
+                        journal_error(self.out_dir, url=url, error="ClientError")
+                except Exception as err:
+                    print(f"Error processing URL: {url}. Exception: {err}")
+                    journal_error(self.out_dir, url=url, error=str(err))
 
 
 class ParallelizeIIIF(ConfigIIIF):
@@ -117,8 +135,10 @@ class ParallelizeIIIF(ConfigIIIF):
         """
         for url in chunk:
             manifest = ManifestIIIF(str(url), path=self.out_dir, n=self.n, verbose=self.verbose, random=self.random)
+            # make dir
             self.out_dir = manifest.out_dir
             make_out_dirs(self.out_dir)
+            # config api image
             manifest.config = self.config
             if self.verbose:
                 print("Creating directory to IIIF files")
@@ -132,7 +152,8 @@ class ParallelizeIIIF(ConfigIIIF):
                 urls = urls[:min(self.n, len(urls) - 1)]
             self._process_chunk_image(urls)
 
-    def _get_cpu(self):
+    @staticmethod
+    def _get_cpu():
         """Determine the number of processes"""
         return max(2, multiprocessing.cpu_count() // 2)
 
@@ -147,27 +168,43 @@ class ParallelizeIIIF(ConfigIIIF):
             self.num_processes = len(self.urls)
         # Split the URLs among processes
         url_chunks = [self.urls[i::self.num_processes] for i in range(self.num_processes)]
-        with tqdm(total=len(url_chunks), desc="Downloading Images", unit="%",
-                  ncols=80, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
+
+        # Shared counter for tracking processed URLs
+        manager = multiprocessing.Manager()
+        counter = manager.Value('i', 0)
+
+        # Function to process a chunk
+        def process_chunk(chunk):
+            if self.image:
+                self._process_chunk_image(chunk)
+            else:
+                self._process_chunk_manifest(chunk)
+            # Update the shared counter after processing the chunk
+            counter.value += len(chunk)
+
+        with tqdm(total=len(self.urls), desc="Downloading Images", unit="%",
+                  ncols=80, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}\n') as pbar:
+            processes = []
             for chunk in url_chunks:
                 # Create a process for each chunk
-                if self.image:
-                    process = multiprocessing.Process(target=self._process_chunk_image, args=(chunk,))
-                else:
-                    process = multiprocessing.Process(target=self._process_chunk_manifest, args=(chunk,))
-                self.processes.append(process)
+                process = multiprocessing.Process(target=process_chunk, args=(chunk,))
+                processes.append(process)
                 process.start()
 
-                # Measure CPU and memory usage during execution
-                while any(process.is_alive() for process in self.processes):
-                    cpu_percent.append(psutil.cpu_percent())
-                    memory_usage.append(psutil.virtual_memory().percent)
+            # Measure CPU and memory usage during execution
+            while any(process.is_alive() for process in processes):
+                cpu_percent.append(psutil.cpu_percent())
+                memory_usage.append(psutil.virtual_memory().percent)
+
+                # Update the progress bar with the current value of the shared counter
+                pbar.update(counter.value - pbar.n)
+
+                # Flush the output to display the updated progress bar immediately
+                sys.stdout.flush()
 
             # Wait for all processes to finish
-            for process in self.processes:
+            for process in processes:
                 process.join()
-                pbar.update(1)
-                sys.stdout.flush()
 
         # Determine resource and time consumption
         end_time = time.time()

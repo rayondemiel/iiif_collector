@@ -86,4 +86,4 @@ def randomized(image_list: ImageList, number: int) -> ImageList:
 
 def journal_error(path, **kwargs):
     with open(os.path.join(path, "logs.txt"), "a") as f:
-        f.writelines(f"""{kwargs["url"]} : error {kwargs['error']}""")
+        f.writelines(f"""{kwargs["url"]} : error {kwargs['error']}\n""")

@@ -1,5 +1,6 @@
 import click
 import os
+from requests import Session
 
 from scr.iiif import ManifestIIIF, ImageIIIF
 from scr.iiif_list import ListIIIF
@@ -94,8 +95,10 @@ def iiif_singular(url, **kwargs):
         image.save_image()
 
     else:
+        # Session
+        session = Session()
         # Instance manifest
-        manifest = ManifestIIIF(str(url), path=current_path, n=n,
+        manifest = ManifestIIIF(str(url), path=current_path, session=session, n=n,
                                 verbose=kwargs['verbose'], random=kwargs['random'],
                                 )
         if kwargs['api'] != 3.0:
@@ -195,7 +198,7 @@ def iiif_list(file, **kwargs):
         parallelization.run()
     else:
         parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path,
-                                          verbose=kwargs['verbose'])
+                                          verbose=kwargs['verbose'], n=n, random=kwargs['random'])
         # API parameters
         parallelization.image_configuration(region=kwargs['region'],
                                             size=kwargs['width'],
