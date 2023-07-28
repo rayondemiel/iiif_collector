@@ -2,7 +2,6 @@ import asyncio
 import aiohttp
 import aiofiles
 import multiprocessing
-import time
 import psutil
 import os
 import sys
@@ -10,8 +9,8 @@ from tqdm import tqdm
 
 from .iiif import ImageIIIF, ManifestIIIF, ConfigIIIF
 from .variables import DEFAULT_OUT_DIR
-from scr.opt.performance import calculate_performance
 from scr.opt.utils import journal_error, randomized, make_out_dirs
+from scr.opt.decorators import time_counter, performance
 
 
 class IIIFCollector(object):
@@ -136,8 +135,9 @@ class ParallelizeIIIF(ConfigIIIF):
         """Determine the number of processes"""
         return max(2, multiprocessing.cpu_count() // 2)
 
+    @time_counter
+    @performance
     def run(self):
-        start_time = time.time()  # Start time
         # Variable for cpu and memory
         cpu_percent = []
         memory_usage = []
@@ -169,6 +169,5 @@ class ParallelizeIIIF(ConfigIIIF):
                 pbar.update(1)
                 sys.stdout.flush()
 
-        # Determine resource and time consumption
-        end_time = time.time()
-        calculate_performance(start_time, end_time, cpu_percent, memory_usage)
+        # Return the collected performance data as a tuple
+        return cpu_percent, memory_usage
