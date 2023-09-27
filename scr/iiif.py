@@ -19,7 +19,7 @@ class ConfigIIIF(object):
     API = 3.0
 
     def __init__(self, **kwargs):
-        self.verbose = kwargs.get('verbose', False)
+        self.verbose = kwargs['verbose']
         pass
 
     def __config__(self):

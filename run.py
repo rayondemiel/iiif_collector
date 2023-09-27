@@ -57,7 +57,6 @@ def iiif_singular(url, **kwargs):
 
     :param url: url IIIF manifest or images
     """
-
     # determinate quantity
     if kwargs['number']:
         n = int(input("How many images do you want (15 recommended)?"))
@@ -148,12 +147,15 @@ def iiif_singular(url, **kwargs):
                                                                   "number indicated")
 @click.option("--case-insensitive", "case_insensitive", type=bool, is_flag=True, help="To disabled case sensitive for the name of your column (csv)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
+@click.option('--retry', 'retry', type=int, default=10, help="Option to readjust the number of tries for asynchronous requests. A large number of requests can unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
+@click.option('--delay', 'delay', type=int, default=5, help="Option to readjust the delay between repetitions of asynchronous requests. Delaying a request may unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
 def iiif_list(file, **kwargs):
     """
 
     :file:
     :return:
     """
+    print(kwargs)
     # determinate quantity
     if kwargs['number']:
         n = int(input("How many images do you want (15 recommended)?"))
@@ -187,7 +189,12 @@ def iiif_list(file, **kwargs):
         raise FileExistsError("Sorry, your file need to be in csv or txt format.")
 
     if kwargs['image']:
-        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path, image=True, verbose=kwargs['verbose'])
+        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif,
+                                          path=current_path,
+                                          image=True,
+                                          retry=kwargs['retry'],
+                                          delay=kwargs['delay'],
+                                          verbose=kwargs['verbose'])
         # API parameters
         parallelization.image_configuration(region=kwargs['region'],
                                             size=kwargs['width'],
@@ -197,8 +204,13 @@ def iiif_list(file, **kwargs):
         make_out_dirs(parallelization.out_dir, api=True)
         parallelization.run()
     else:
-        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif, path=current_path,
-                                          verbose=kwargs['verbose'], n=n, random=kwargs['random'])
+        parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif,
+                                          path=current_path,
+                                          verbose=kwargs['verbose'],
+                                          retry=kwargs['retry'],
+                                          delay=kwargs['delay'],
+                                          n=n,
+                                          random=kwargs['random'])
         # API parameters
         parallelization.image_configuration(region=kwargs['region'],
                                             size=kwargs['width'],
