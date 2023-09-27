@@ -2,6 +2,7 @@ import os
 import shutil
 import json
 import random
+from urllib.parse import urlparse, quote, unquote
 
 from scr.variables import ImageList, MetadataList, CONFIG_FOLDER
 
@@ -18,6 +19,25 @@ def suppress_char(txt):
         txt = txt.replace(sign, "_")
         txt = txt.replace("__", "_")
     return txt
+
+def url2filename(url: str) -> str:
+    """
+    Transform url to filename base ID with prefix and identifier
+    :param url: str, url
+    :return: str, filename clean
+    """
+    path_url = urlparse(url).path.split('/')[1:-4]
+    path_url = '/'.join(path_url)
+    return quote(path_url, safe='')
+
+def filename2path_url(filename: str) -> str:
+    """
+    Transform filename to base ID (path) of url IIIF without parameters
+    scheme://server/[PATH ID]/full/max/0/default.jpg
+    :param url: str, url
+    :return: str, filename clean
+    """
+    return unquote(filename)
 
 
 def cleaning_folder(path):

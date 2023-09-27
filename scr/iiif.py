@@ -5,7 +5,7 @@ import tqdm
 import re
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER, OUTPUT_LIST_TXT
-from scr.opt.utils import save_json, save_txt, randomized, journal_error, suppress_char
+from scr.opt.utils import save_json, save_txt, randomized, journal_error, suppress_char, url2filename
 
 
 class ConfigIIIF(object):
@@ -20,7 +20,7 @@ class ConfigIIIF(object):
 
     def __init__(self, **kwargs):
         self.verbose = kwargs.get('verbose', False)
-        pass
+        self.short_filename = kwargs['short_filename']
 
     def __config__(self):
         print(f"Api level is {str(self.API)}. \n"
@@ -89,10 +89,10 @@ class ImageIIIF(ConfigIIIF):
         if self.verbose:
             print(url)
         # get filename
-        if filename is None:
-            self.id_img = self.__get_id__(url.split('/')[-5])
-        else:
+        if filename is not None and self.short_filename is True:
             self.id_img = filename
+        else:
+            self.id_img = url2filename(url)
         try:
             #Check session
             if session is None:
@@ -241,7 +241,6 @@ class ManifestIIIF(ConfigIIIF):
         :param self: URI of a manifest
         :return: List of images link
         """
-
         return list([
             (canvas['images'][0]['resource']['@id'], canvas['@id'].split("/")[-1])
             for canvas in self.json['sequences'][0]['canvases']
@@ -262,7 +261,7 @@ class ManifestIIIF(ConfigIIIF):
 
             with tqdm.tqdm(total=len(list(images)), desc='Saving images', unit='image') as pbar:
                 for url, filename in images:
-                    image = ImageIIIF(url, self.out_dir)
+                    image = ImageIIIF(url, self.out_dir, short_filename=self.short_filename)
                     image.config = self.config
                     if self.session is not None:
                         image.load_image(filename=filename, session=self.session)
