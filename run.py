@@ -49,6 +49,7 @@ def run_collect():
               help="To active selection of images to save by manifest")
 @click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
                                                                   "number indicated")
+@click.option("--filename", "filename", type=bool, is_flag=True, help="To obtain a simplified image name (for manifests)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def iiif_singular(url, **kwargs):
     """
@@ -97,9 +98,13 @@ def iiif_singular(url, **kwargs):
         # Session
         session = Session()
         # Instance manifest
-        manifest = ManifestIIIF(str(url), path=current_path, session=session, n=n,
-                                verbose=kwargs['verbose'], random=kwargs['random'],
-                                )
+        manifest = ManifestIIIF(str(url),
+                                path=current_path,
+                                session=session,
+                                n=n,
+                                verbose=kwargs['verbose'],
+                                random=kwargs['random'],
+                                short_filename=kwargs['filename'])
         if kwargs['api'] != 3.0:
             manifest.api_mode(kwargs['api'])
         manifest.image_configuration(region=kwargs['region'],
@@ -147,6 +152,7 @@ def iiif_singular(url, **kwargs):
                                                                   "number indicated")
 @click.option("--case-insensitive", "case_insensitive", type=bool, is_flag=True, help="To disabled case sensitive for the name of your column (csv)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
+@click.option("--filename", "filename", type=bool, is_flag=True, help="To obtain a simplified image name (for manifests)")
 @click.option('--retry', 'retry', type=int, default=10, help="Option to readjust the number of tries for asynchronous requests. A large number of requests can unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
 @click.option('--delay', 'delay', type=int, default=5, help="Option to readjust the delay between repetitions of asynchronous requests. Delaying a request may unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
 def iiif_list(file, **kwargs):
@@ -155,7 +161,6 @@ def iiif_list(file, **kwargs):
     :file:
     :return:
     """
-    print(kwargs)
     # determinate quantity
     if kwargs['number']:
         n = int(input("How many images do you want (15 recommended)?"))
@@ -210,7 +215,8 @@ def iiif_list(file, **kwargs):
                                           retry=kwargs['retry'],
                                           delay=kwargs['delay'],
                                           n=n,
-                                          random=kwargs['random'])
+                                          random=kwargs['random'],
+                                          short_filename=kwargs['filename'])
         # API parameters
         parallelization.image_configuration(region=kwargs['region'],
                                             size=kwargs['width'],

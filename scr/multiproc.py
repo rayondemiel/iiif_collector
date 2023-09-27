@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from .iiif import ImageIIIF, ManifestIIIF, ConfigIIIF
 from .variables import DEFAULT_OUT_DIR
-from scr.opt.utils import journal_error, randomized, make_out_dirs
+from scr.opt.utils import journal_error, randomized, make_out_dirs, url2filename
 from scr.opt.decorators import time_counter, performance
 
 
@@ -29,6 +29,7 @@ class IIIFCollector(object):
         self.verbose = kwargs.get('verbose')
         self.delay = kwargs['delay']
         self.retry = kwargs['retry']
+        self.short_filename = kwargs['short_filename']
 
     async def process_urls(self, urls: list):
         """
@@ -40,7 +41,8 @@ class IIIFCollector(object):
         if isinstance(urls[0], tuple):
             tasks = [ImageIIIFAsync(url,
                                     path=os.path.join(self.path, 'images'),
-                                    verbose=self.verbose).load_image_async(self.session,
+                                    verbose=self.verbose,
+                                    short_filename=self.short_filename).load_image_async(self.session,
                                                                            filename=filename,
                                                                            max_retries=self.retry,
                                                                            retry_delay=self.delay)
@@ -49,7 +51,8 @@ class IIIFCollector(object):
         else:
             tasks = [ImageIIIFAsync(url,
                                     path=os.path.join(self.path, 'image_IIIF'),
-                                    verbose=self.verbose).load_image_async(
+                                    verbose=self.verbose,
+                                    short_filename=self.short_filename).load_image_async(
                                                                             self.session,
                                                                             max_retries=self.retry,
                                                                             retry_delay=self.delay)
@@ -69,8 +72,8 @@ class IIIFCollector(object):
 
 
 class ImageIIIFAsync(ImageIIIF):
-    def __init__(self, url, path, verbose=False):
-        super().__init__(url=url, path=path, verbose=verbose)
+    def __init__(self, url, path, verbose=False, short_filename=False):
+        super().__init__(url=url, path=path, verbose=verbose, short_filename=short_filename)
 
     async def load_image_async(self, session, max_retries: int, retry_delay: int, filename=None):
         """
@@ -84,10 +87,10 @@ class ImageIIIFAsync(ImageIIIF):
         if self.verbose:
             print(url)
         # get filename
-        if filename is None:
-            self.id_img = self.__get_id__(url.split('/')[-5])
-        else:
+        if filename is not None and self.short_filename is True:
             self.id_img = filename
+        else:
+            self.id_img = url2filename(url)
         for retry_count in range(max_retries + 1):
             try:
                 async with session.get(url) as response:
@@ -147,7 +150,8 @@ class ParallelizeIIIF(ConfigIIIF):
         collector = IIIFCollector(path=self.out_dir,
                                   verbose=self.verbose,
                                   delay= self.delay,
-                                  retry= self.retry)
+                                  retry= self.retry,
+                                  short_filename=self.short_filename)
         asyncio.run(collector.run_async(chunk))
         loop.close()
 
@@ -157,7 +161,12 @@ class ParallelizeIIIF(ConfigIIIF):
         :chunk: chunk of urls manifest (API REST JSON)
         """
         for url in chunk:
-            manifest = ManifestIIIF(str(url), path=self.out_dir, n=self.n, verbose=self.verbose, random=self.random)
+            manifest = ManifestIIIF(str(url),
+                                    path=self.out_dir,
+                                    n=self.n,
+                                    verbose=self.verbose,
+                                    random=self.random,
+                                    short_filename=self.short_filename)
             # make dir
             self.out_dir = manifest.out_dir
             make_out_dirs(self.out_dir)
