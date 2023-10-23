@@ -9,16 +9,6 @@ from scr.opt.utils import make_out_dirs
 from scr.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
 from scr.multiproc import ParallelizeIIIF
 
-
-# test https://bvmm.irht.cnrs.fr/iiif/17495/manifest
-# test2 https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb10402127/manifest   -> voir pour telecharger sortie ocr (seealso)
-# test image https://iiif.unicaen.fr/mrsh/bvmsm/AVRANCHES_MS059/AVRANCHES_MS059_0012.tif/full/full/0/default.jpg
-
-
-# retourne lien html (https://github.com/kba/hocr-spec)
-# ref 1 https://github.com/PonteIneptique/iiif-random-downloader/blob/main/cli.py
-# ref 2 https://github.com/YaleDHLab/iiif-downloader/blob/master/iiif_downloader/__init__.py#L16
-
 @click.group()
 def run_collect():
     pass
