@@ -6,7 +6,7 @@
 
 Ce CLI (*Command Line Interface*) permet d'extraire les données selon le framework IIIF à partir de plusieurs fonctions. Il permet notamment le téléchargement des images selon les standards de l'API Image selon les besoins et le serveur d'origine. Le script supporte aussi la manipulation images et des métadonnées d'un manifeste IIIF.
 
-Le script fonctionne sur les environnements Linux/Mac et en cours de test pour Windows.
+Le script fonctionne sur les environnements UNIX(Linux/Max) et POSIX(Windows).
 
 
 #### Compatibilités API IIIF:
@@ -42,6 +42,30 @@ Le script fonctionne sur les environnements Linux/Mac et en cours de test pour W
   * Installer les packages et librairies :
   
     * Activer l'environnement : ```source [nom de l'environnement]/bin/activate```;
+    
+    * Installer les différentes librairies ```pip install -r requirements.txt```;
+    
+    * Vérifier que tout est installé : ```pip freeze``` ;
+    
+    * Sortir de l'environnement : ```deactivate``` .
+   
+*Nota : commandes à exécuter dans le terminal (Windows).*
+
+  * Cloner le dossier : ```git clone https://github.com/rayondemiel/iiif_collector.git``` ou télécharger le [zip](https://github.com/rayondemiel/iiif_collector/archive/refs/heads/main.zip) et décompressez-le.
+  
+  * Installer l'environnement virtuel :
+  
+    * Vérifier que la version de Python est bien 3.x et dans l'idéal la version 3.10 : ```python --version```;
+    
+    * Si vous ne possédez pas python, veuillez installer via le site officiel: https://www.python.org/
+    
+    * Aller dans le dossier : clique droit dans le dossier puis `Ouvrir dans le terminal`;
+    
+    * Installer l'environnement : ```python3 -m venv [nom de l'environnement]```.
+  
+  * Installer les packages et librairies :
+  
+    * Activer l'environnement : ``` .\[nom de l'environnement]\Scripts\activate```;
     
     * Installer les différentes librairies ```pip install -r requirements.txt```;
     
