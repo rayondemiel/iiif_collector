@@ -4,3 +4,5 @@ __pychache__/
 iiif_output/
 .idea/
 test/
+data/
+*.pyc
