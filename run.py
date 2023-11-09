@@ -17,9 +17,9 @@ def run_collect():
 @run_collect.command()
 @click.argument("url", type=click.STRING)
 @click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
-@click.option("-w", "--width", "width", type=str, default="max", help="Width to resize image")
+@click.option("-s", "--size", "size", type=str, default="max", help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change width. To more example, refer to image IIIF documentation.")
 @click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
-              help="Width to resize image")
+              help="To change quality parameter determines whether the image is delivered in color, grayscale or black and white")
 @click.option("-r", "--rotation", "rotation", type=int, default=0, help="Rotation parameter specifies mirroring and \
                                                                             rotation, 0 to 360.")
 @click.option("-R", "--region", "region", type=str, default="full", help="The region parameter defines the rectangular \
@@ -75,7 +75,7 @@ def iiif_singular(url, **kwargs):
             image.api_mode(kwargs['api'])
         # API parameters
         image.image_configuration(region=kwargs['region'],
-                                  size=kwargs['width'],
+                                  size=kwargs['size'],
                                   rotation=kwargs['rotation'],
                                   quality=kwargs['quality'],
                                   format=kwargs['format']
@@ -98,7 +98,7 @@ def iiif_singular(url, **kwargs):
         if kwargs['api'] != 3.0:
             manifest.api_mode(kwargs['api'])
         manifest.image_configuration(region=kwargs['region'],
-                                     size=kwargs['width'],
+                                     size=kwargs['size'],
                                      rotation=kwargs['rotation'],
                                      quality=kwargs['quality'],
                                      format=kwargs['format'],
@@ -118,7 +118,7 @@ def iiif_singular(url, **kwargs):
 @run_collect.command()
 @click.argument("file", type=click.STRING)
 @click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
-@click.option("-w", "--width", "width", type=str, default="max", help="Width to resize image")
+@click.option("-s", "--size", "size", type=str, default="max", help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change width. To more example, refer to image IIIF documentation.")
 @click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
               help="Width to resize image")
 @click.option("-r", "--rotation", "rotation", type=int, default=0, help="Rotation parameter specifies mirroring and \
@@ -192,7 +192,7 @@ def iiif_list(file, **kwargs):
                                           verbose=kwargs['verbose'])
         # API parameters
         parallelization.image_configuration(region=kwargs['region'],
-                                            size=kwargs['width'],
+                                            size=kwargs['size'],
                                             rotation=kwargs['rotation'],
                                             quality=kwargs['quality'],
                                             format=kwargs['format'])
@@ -209,7 +209,7 @@ def iiif_list(file, **kwargs):
                                           short_filename=kwargs['filename'])
         # API parameters
         parallelization.image_configuration(region=kwargs['region'],
-                                            size=kwargs['width'],
+                                            size=kwargs['size'],
                                             rotation=kwargs['rotation'],
                                             quality=kwargs['quality'],
                                             format=kwargs['format'])
