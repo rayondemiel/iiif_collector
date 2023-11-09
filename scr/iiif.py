@@ -124,8 +124,6 @@ class ImageIIIF(ConfigIIIF):
             print("configuration parameters API image")
         split[-4] = str(self.config['region'])
         split[-3] = str(self.config['size'])
-        if self.config['size'] != 'max' and self.config['size'] != 'full':
-            split[-3] += ','
         split[-2] = str(self.config['rotation'])
         split[-1] = self.change_format(split[-1])
         if ImageIIIF.verbose:
