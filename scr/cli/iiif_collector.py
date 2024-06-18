@@ -11,6 +11,7 @@ from scr.multiproc import ParallelizeIIIF
 
 @click.group()
 def run_collect():
+    """CLI for collecting and downloading IIIF images, metadata, and manifests."""
     pass
 
 
@@ -147,9 +148,8 @@ def iiif_singular(url, **kwargs):
 @click.option('--delay', 'delay', type=int, default=5, help="Option to readjust the delay between repetitions of asynchronous requests. Delaying a request may unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
 def iiif_list(file, **kwargs):
     """
-
-    :file:
-    :return:
+    Process multiple IIIF URLs from a file.
+    FILE: Path to file containing IIIF URLs (TXT or CSV format).
     """
     # determinate quantity
     if kwargs['number']:
@@ -224,10 +224,9 @@ def iiif_list(file, **kwargs):
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def get_list_image(url, **kwargs):
     """
+    Retrieve and save a list of images from a IIIF manifest.
 
-    :param url:
-    :param kwargs:
-    :return:
+    URL: IIIF manifest URL.
     """
     # Get path
     current_path = os.getcwd()
