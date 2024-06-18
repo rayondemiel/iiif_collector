@@ -6,3 +6,4 @@ iiif_output/
 test/
 data/
 *.pyc
+venv/
