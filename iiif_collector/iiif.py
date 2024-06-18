@@ -52,6 +52,7 @@ class ConfigIIIF(object):
         if cls.API < 3.0 and cls.config['size'] == "max":
             cls.config['size'] = "full"
 
+        journal_error(level='INFO', object='CONFIG IIIF', message=str(cls.config), complement_info="Updated IIIF configuration.")
         if cls.verbose:
             print("Updated IIIF configuration.")
 
@@ -105,6 +106,7 @@ class ImageIIIF(ConfigIIIF):
                 self.img = session.get(url, stream=True, allow_redirects=True)
             # Check status request
             if 200 <= self.img.status_code < 400:
+                journal_error(level='INFO', object=url, message=str(self.img.status_code), complement_info=str(f"Succesing request image {str(self.id_img)}"))
                 if self.verbose:
                     print(f"Succesing request image {str(self.id_img)} to {url}")
             else:
@@ -112,6 +114,7 @@ class ImageIIIF(ConfigIIIF):
                 self._log_error(url, self.img.status_code)
                 pass
         except requests.exceptions.RequestException as err:
+            self._log_error(url, err)
             print(err)
 
     def _format_url(self, url):
@@ -119,8 +122,6 @@ class ImageIIIF(ConfigIIIF):
         # {scheme}://{server}{/prefix}/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
         # scheme, server, prefix, identifier, region, size, rotation, quality = [i for i in url.split('/') if i]
         url_parts = url.split('/')
-        if self.verbose:
-            print("configuration parameters API image")
         url_parts[-4] = str(self.config['region'])
         url_parts[-3] = str(self.config['size'])
         url_parts[-2] = str(self.config['rotation'])
@@ -140,6 +141,7 @@ class ImageIIIF(ConfigIIIF):
                 with open(os.path.join(out_path, self.id_img + "." + self.config['format']), 'wb') as f:
                     self.img.raw.decode_content = True
                     shutil.copyfileobj(self.img.raw, f)
+                journal_error(level='INFO', object=self.id_img + "." + self.config['format'], message=str('* saving'))
             if self.verbose:
                 print(' * saving', out_path)
         except (OSError, Exception) as err:
@@ -155,9 +157,10 @@ class ImageIIIF(ConfigIIIF):
         parts[-1] = self.config['format'] if self.config['format'] != 'default' else parts[-1]
         return '.'.join(parts)
 
-    def _log_error(self, url: str, error: int or str):
+    @staticmethod
+    def _log_error(url: str, error: int or str):
         """Log errors encountered during image loading"""
-        journal_error(self.out_dir, url=url, error=error)
+        journal_error(level='ERROR', object=url, message=str(error))
 
 
 class ManifestIIIF(ConfigIIIF):
@@ -200,12 +203,16 @@ class ManifestIIIF(ConfigIIIF):
         """
         if self.verbose:
             print(' * loading manifest from url', url)
-        if self.session is not None:
-            assert isinstance(self.session, requests.Session), "Session need to be instanced"
-            self.json = self.session.get(url).json()
-        else:
-            self.json = requests.get(url).json()
-        self.id = self._clean_id(self.json.get('@id', ''))  # CHANGED: Moved ID cleaning to a separate method
+        try:
+            if self.session is not None:
+                assert isinstance(self.session, requests.Session), "Session need to be instanced"
+                self.json = self.session.get(url).json()
+            else:
+                self.json = requests.get(url).json()
+            journal_error(level='INFO', object=url, message=str('Request manifest succeed'))
+        except Exception as err:
+            journal_error(level='ERROR', object=url, message=str(err))
+        self.id = self._clean_id(self.json.get('@id', ''))
         self.title = self._get_title()
 
     def _clean_id(self, id_value: str) -> str:
@@ -227,6 +234,7 @@ class ManifestIIIF(ConfigIIIF):
         :return: Bool, true if manifest in self.json
         """
         if len(self.json) < 1:
+            journal_error(level='WARNING', object=self.url, message=str("Verify link or request. <ManifestIIIF._load_from_url>"))
             print(f"""Verify link or request. <ManifestIIIF._load_from_url> \n link : {self.url}""")
             return False
         return True
@@ -244,6 +252,7 @@ class ManifestIIIF(ConfigIIIF):
             out_path = os.path.join(self.out_dir, 'manifests')
             save_json(iiif_json=self.json, file_path=out_path)
             if self.verbose:
+                journal_error(level='INFO', object=self.url, message=str("Manifest saved"))
                 print('Finished saving manifests!')
 
     def get_images_from_manifest(self) -> ImageList:
@@ -280,7 +289,7 @@ class ManifestIIIF(ConfigIIIF):
                         image.load_image(filename=filename)
                     image.save_image()
                     pbar.update(1)
-
+            journal_error(level='INFO', object=url, message=str("Image saved"))
             if self.verbose:
                 print('Finished saving images!')
 
@@ -290,6 +299,7 @@ class ManifestIIIF(ConfigIIIF):
         with open(out_path, 'w') as f:
             for image in self.get_images_from_manifest():
                 f.write(f"{image[0]}\n")
+        journal_error(level='INFO', object=self.url, message=str("List of images in manifeste saved"))
 
     def _get_metadata(self) -> MetadataList:
         """ Gets a URI, read the manifest
@@ -318,6 +328,7 @@ class ManifestIIIF(ConfigIIIF):
             if os.path.isfile(path):
                 return path
             else:
+                journal_error(level='ERROR', object=self.url, message=str("Path manifest IIIF not found"))
                 print(f"Error! File {str(self.list_image_txt)} doesn't exists")
         else:
             print("<ManifestIIIF.__print_path> error config folder. Verify it.")
