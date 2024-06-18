@@ -187,21 +187,9 @@ class ManifestIIIF(ConfigIIIF):
         self.n = kwargs.get('n')
         self.random = kwargs.get('random', False)
         self._load_from_url(url)
-
-        # Get default value title
-        if isinstance(self.title, dict):
-            if 'en' in self.title:
-                title_value = self.title['en']
-            else:
-                title_value = next(iter(self.title.values()))
-        else:
-            title_value = self.title
-        if isinstance(title_value, list):
-            title_value = title_value[0]
-        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR, title_value)
-        # Check if dir exist
-        if os.path.isdir(self.out_dir) is False:
-            os.makedirs(self.out_dir)
+        self.default_title_value = self._get_title_value()
+        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR, self.default_title_value)
+        os.makedirs(self.out_dir, exist_ok=True)
 
     def __str__(self):
         print(f"URI manifest is : {self.url}")
@@ -213,13 +201,25 @@ class ManifestIIIF(ConfigIIIF):
         if self.verbose:
             print(' * loading manifest from url', url)
         if self.session is not None:
-            assert type(self.session) == requests.Session, "Session need to be instanced"
+            assert isinstance(self.session, requests.Session), "Session need to be instanced"
             self.json = self.session.get(url).json()
         else:
             self.json = requests.get(url).json()
-        self.id = self.json.get('@id', '').removeprefix("https://").replace("manifest/", "").replace('/', '_').rstrip(
-            '.json')
+        self.id = self._clean_id(self.json.get('@id', ''))  # CHANGED: Moved ID cleaning to a separate method
         self.title = self._get_title()
+
+    def _clean_id(self, id_value: str) -> str:
+        """Clean the ID value from the manifest."""
+        return id_value.removeprefix("https://").replace("manifest/", "").replace('/', '_').rstrip('.json')
+
+    def _get_title_value(self) -> str:
+        """Extract and clean the title value from the manifest."""
+        title = self.json.get('label', '')
+        if isinstance(title, dict):
+            title_value = title.get('en', next(iter(title.values())))
+        else:
+            title_value = title
+        return title_value[0] if isinstance(title_value, list) else title_value
 
     def _json_present(self) -> bool:
         """
@@ -243,8 +243,8 @@ class ManifestIIIF(ConfigIIIF):
         if self._json_present():
             out_path = os.path.join(self.out_dir, 'manifests')
             save_json(iiif_json=self.json, file_path=out_path)
-        if self.verbose:
-            print('Finish to save manifests !')
+            if self.verbose:
+                print('Finished saving manifests!')
 
     def get_images_from_manifest(self) -> ImageList:
         """ Gets a URI, read the manifest
@@ -267,10 +267,10 @@ class ManifestIIIF(ConfigIIIF):
             images = self.get_images_from_manifest()
             if self.random and self.n is not None:
                 images = randomized(images, self.n)
-            elif not self.random and self.n is not None:
+            elif self.n is not None:
                 images = zip(images, range(min(self.n, len(images) - 1)))
 
-            with tqdm.tqdm(total=len(list(images)), desc='Saving images', unit='image') as pbar:
+            with tqdm.tqdm(total=len(list(images)), desc='Saving images', unit='images') as pbar:
                 for url, filename in images:
                     image = ImageIIIF(url, self.out_dir, short_filename=self.short_filename)
                     image.config = self.config
@@ -282,22 +282,14 @@ class ManifestIIIF(ConfigIIIF):
                     pbar.update(1)
 
             if self.verbose:
-                print('Finish to save image !')
+                print('Finished saving images!')
 
     def save_list_images(self):
-        """
-        Save all images instanced in disk
-        :return: None
-        """
-
+        """Save a list of images to disk."""
         out_path = os.path.join(self.out_dir, 'images', self.list_image_txt)
-
-        if os.path.isfile(out_path):
-            os.remove(out_path)
-
-        for image in self.get_images_from_manifest():
-            with open(os.path.join(out_path), 'a+') as f:
-                f.writelines(f"{image[0]}\n")
+        with open(out_path, 'w') as f:
+            for image in self.get_images_from_manifest():
+                f.write(f"{image[0]}\n")
 
     def _get_metadata(self) -> MetadataList:
         """ Gets a URI, read the manifest
@@ -312,8 +304,8 @@ class ManifestIIIF(ConfigIIIF):
             out_path = os.path.join(self.out_dir, 'metadata')
             mtda = self._get_metadata()
             save_txt(list_mtda=mtda, file_path=out_path)
-        if self.verbose:
-            print('Finish to save metadata !')
+            if self.verbose:
+                print('Finished saving metadata!')
 
     def __print_path__(self, idx: str) -> str:
         """
