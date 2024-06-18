@@ -16,13 +16,14 @@ from scr.opt.decorators import time_counter, performance
 class IIIFCollector(object):
     def __init__(self, path: str, **kwargs):
         """
-        Class to manage async process of list of image with aiohttp
+        Class to manage asynchronous processing of a list of images using aiohttp.
 
-        :path: str, path of folder
-        :session: to instantiate the ClientSession class
-        :verbose: bool, verbose
-        :delay: int, Delay parameters to transfert in ImageIIIFAsync
-        :retry: int, Retry parameters to transfert in ImageIIIFAsync
+        :param path: str, path of the folder where images will be saved.
+        :param session: aiohttp.ClientSession, optional session to use for HTTP requests.
+        :param verbose: bool, if True, enables verbose logging.
+        :param delay: int, delay in seconds between retries.
+        :param retry: int, number of retry attempts for failed downloads.
+        :param short_filename: bool, if True, uses shortened filenames.
         """
         self.path = path
         self.session = None
@@ -33,36 +34,38 @@ class IIIFCollector(object):
 
     async def process_urls(self, urls: list):
         """
-        async process urls to make task to download list of images
-        :urls: list, chunk of urls
+        Asynchronously processes a list of URLs to download images.
+        :urls: list, chunk of URLs or tuples (URL, filename) to download.
         """
         # Create tasks for each URL
         # if base is manifest
-        if isinstance(urls[0], tuple):
-            tasks = [ImageIIIFAsync(url,
-                                    path=os.path.join(self.path, 'images'),
-                                    verbose=self.verbose,
-                                    short_filename=self.short_filename).load_image_async(self.session,
-                                                                           filename=filename,
-                                                                           max_retries=self.retry,
-                                                                           retry_delay=self.delay)
-                     for url, filename in urls]
-        # if directely image
-        else:
-            tasks = [ImageIIIFAsync(url,
-                                    path=os.path.join(self.path, 'image_IIIF'),
-                                    verbose=self.verbose,
-                                    short_filename=self.short_filename).load_image_async(
-                                                                            self.session,
-                                                                            max_retries=self.retry,
-                                                                            retry_delay=self.delay)
-                for url in urls]
+        tasks = []
+        for url in urls:
+            if isinstance(url, tuple):
+                url, filename = url
+                task = ImageIIIFAsync(url,
+                                      path=os.path.join(self.path, 'images'),
+                                      verbose=self.verbose,
+                                      short_filename=self.short_filename).load_image_async(self.session,
+                                                                                           filename=filename,
+                                                                                           max_retries=self.retry,
+                                                                                           retry_delay=self.delay)
+            else:
+                task = ImageIIIFAsync(url,
+                                      path=os.path.join(self.path, 'image_IIIF'),
+                                      verbose=self.verbose,
+                                      short_filename=self.short_filename).load_image_async(self.session,
+                                                                                           max_retries=self.retry,
+                                                                                           retry_delay=self.delay)
+            tasks.append(task)
+
         # Wait for all tasks to complete
         await asyncio.gather(*tasks)
 
-    async def run_async(self, urls):
+    async def run_async(self, urls: list):
         """
-        run aoihttp session to async request
+        Runs an aiohttp session to asynchronously request and download images.
+        :param urls: list, a list of URLs or tuples (URL, filename) to download.
         """
         # Create an aiohttp.ClientSession within the context of an async with statement
         # This ensures the session is properly closed
@@ -75,22 +78,25 @@ class ImageIIIFAsync(ImageIIIF):
     def __init__(self, url, path, verbose=False, short_filename=False):
         super().__init__(url=url, path=path, verbose=verbose, short_filename=short_filename)
 
-    async def load_image_async(self, session, max_retries: int, retry_delay: int, filename=None):
+    async def load_image_async(self, session: aiohttp.ClientSession, max_retries: int, retry_delay: int, filename=None):
         """
-        Function to load and download images with IIIF API parameters
-        :session: Session aiohttp
-        :filename: None or str, name of image file
-        :delay: int, Delay between request to load image of a same image
-        :retry: int, Number of retry request's to load image before error
+        Function to load and download images with IIIF API parameters asynchronously.
+
+        :param session: aiohttp.ClientSession, the session to use for the HTTP requests.
+        :param filename: str, optional, the name of the image file.
+        :param max_retries: int, the maximum number of retries for loading the image.
+        :param retry_delay: int, the delay in seconds between retries.
         """
         url = self._format_url(self.url)
         if self.verbose:
             print(url)
-        # get filename
+
+        # Get filename
         if filename is not None and self.short_filename is True:
             self.id_img = filename
         else:
             self.id_img = url2filename(url)
+
         for retry_count in range(max_retries + 1):
             try:
                 async with session.get(url) as response:
@@ -127,7 +133,7 @@ class ImageIIIFAsync(ImageIIIF):
 class ParallelizeIIIF(ConfigIIIF):
     processes = []
 
-    def __init__(self, urls, path, image=False, **kwargs):
+    def __init__(self, urls: list, path: str, image: bool = False, **kwargs):
         super().__init__(**kwargs)
         self.num_processes = self._get_cpu()
         self.urls = urls
@@ -135,30 +141,30 @@ class ParallelizeIIIF(ConfigIIIF):
         self.out_dir = os.path.join(path, DEFAULT_OUT_DIR)
         self.retry = kwargs['retry']
         self.delay = kwargs['delay']
-        if image is False:
+        if not image:
             self.out_dir = path
             self.n = kwargs.get('n')
             self.random = kwargs.get('random')
 
     def _process_chunk_image(self, chunk):
         """
-        Async process list of image urls
-        :chunck: list, chunk of all urls (manifest or image)
+        Asynchronously process a list of image URLs.
+        :param chunk: list, chunk of all URLs (manifest or image)
         """
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         collector = IIIFCollector(path=self.out_dir,
                                   verbose=self.verbose,
-                                  delay= self.delay,
-                                  retry= self.retry,
+                                  delay=self.delay,
+                                  retry=self.retry,
                                   short_filename=self.short_filename)
         asyncio.run(collector.run_async(chunk))
         loop.close()
 
-    def _process_chunk_manifest(self, chunk):
+    def _process_chunk_manifest(self, chunk: list):
         """
-        Multiprocessing manifest IIIF and then async process for images
-        :chunk: chunk of urls manifest (API REST JSON)
+        Multiprocessing manifest IIIF and then asynchronously process for images.
+        :param chunk: list, chunk of URLs manifest (API REST JSON)
         """
         for url in chunk:
             manifest = ManifestIIIF(str(url),
