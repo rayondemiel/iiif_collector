@@ -39,31 +39,31 @@ class ConfigIIIF(object):
         extension = re.compile(r"\.\w{3,4}$")
         return re.sub(extension, "", name)
 
-    @staticmethod
-    def image_configuration(**kwargs):
+    @classmethod
+    def image_configuration(cls, **kwargs):
         """
         Configuration function to API image
         :param kwargs: config attribute key
         """
-        for arg in kwargs:
-            ConfigIIIF.config[arg] = kwargs[arg]
+        for key, value in kwargs.items():
+            cls.config[key] = value
 
-        # Condition API
-        if ConfigIIIF.API < 3.0:
-            if kwargs['size'] == "max":
-                ConfigIIIF.config['size'] = "full"
-        if ImageIIIF.verbose:
-            print("Add configuration IIIF")
+        # Adjust configuration based on API level
+        if cls.API < 3.0 and cls.config['size'] == "max":
+            cls.config['size'] = "full"
 
-    @staticmethod
-    def api_mode(level: float):
+        if cls.verbose:
+            print("Updated IIIF configuration.")
+
+    @classmethod
+    def api_mode(cls, level: float):
         """
         change api level. Ex: 3.0
         :param level: decimal
         :return:
         """
-        ConfigIIIF.API = level
-        if ConfigIIIF.verbose and ConfigIIIF.API != 3.0:
+        cls.API = level
+        if cls.verbose and cls.API != 3.0:
             print(f"Changing API level to {str(level)}")
 
 
