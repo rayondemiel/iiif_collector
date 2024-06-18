@@ -7,3 +7,4 @@ test/
 data/
 *.pyc
 venv/
+logfile.txt
