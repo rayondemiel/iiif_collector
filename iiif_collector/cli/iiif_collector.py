@@ -82,6 +82,7 @@ def iiif_singular(url, **kwargs):
         # Change api configuration
         if kwargs['api'] != 3.0:
             image.api_mode(kwargs['api'])
+            journal_error(level='INFO', object='API', message=str(image.API))
         # API parameters
         image.image_configuration(region=kwargs['region'],
                                   size=kwargs['size'],
