@@ -131,8 +131,8 @@ def journal_error(level: str, **kwargs):
     if level == 'ERROR':
         logging.error(f"An error has occurred - {kwargs['object']} : {kwargs['message']}", exc_info=True)
     elif level == 'WARNING':
-        logging.warning(f"{kwargs['url']} : {kwargs['message']}", exc_info=True)
+        logging.warning(f"{kwargs['object']} : {kwargs['message']}", exc_info=True)
     elif level == 'INFO':
-        logging.info(f"{kwargs['url']} : {kwargs['message']}", exc_info=True)
+        logging.info(f"{kwargs['object']} : {kwargs['message']}", exc_info=True)
     if kwargs['complement_info']:
         logging.info(str(kwargs['complement_info']), exc_info=True)

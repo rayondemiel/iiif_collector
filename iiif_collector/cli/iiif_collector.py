@@ -22,9 +22,11 @@ def run_collect():
 @click.argument("url", type=click.STRING)
 @click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
 @click.option("-s", "--size", "size", type=str, default="max",
-              help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change width. To more example, refer to image IIIF documentation.")
+              help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change "
+                   "width. To more example, refer to image IIIF documentation.")
 @click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
-              help="To change quality parameter determines whether the image is delivered in color, grayscale or black and white")
+              help="To change quality parameter determines whether the image is delivered in color, grayscale or "
+                   "black and white")
 @click.option("-r", "--rotation", "rotation", type=int, default=0, help="Rotation parameter specifies mirroring and \
                                                                             rotation, 0 to 360.")
 @click.option("-R", "--region", "region", type=str, default="full", help="The region parameter defines the rectangular \
@@ -74,6 +76,7 @@ def iiif_singular(url, **kwargs):
         image = ImageIIIF(url=str(url), path=out_dir, verbose=kwargs['verbose'])
         # create directory
         make_out_dirs(image.out_dir)
+        journal_error(level='INFO', object=image.out_dir, message="Creating directory to IIIF files")
         if kwargs['verbose']:
             print("Creating directory to IIIF files")
         # Change api configuration
@@ -109,6 +112,7 @@ def iiif_singular(url, **kwargs):
                                      quality=kwargs['quality'],
                                      format=kwargs['format'],
                                      )
+        journal_error(level='INFO', object=manifest.out_dir, message="Creating directory to IIIF files")
         if kwargs['verbose']:
             print("Creating directory to IIIF files")
         make_out_dirs(manifest.out_dir)
@@ -124,17 +128,19 @@ def iiif_singular(url, **kwargs):
 @click.argument("file", type=click.STRING)
 @click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
 @click.option("-s", "--size", "size", type=str, default="max",
-              help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change width. To more example, refer to image IIIF documentation.")
+              help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change "
+                   "width. To more example, refer to image IIIF documentation.")
 @click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
               help="Width to resize image")
 @click.option("-r", "--rotation", "rotation", type=int, default=0, help="Rotation parameter specifies mirroring and \
                                                                             rotation, 0 to 360.")
-@click.option("-R", "--region", "region", type=str, default="full", help="The region parameter defines the rectangular \
-                                                                            portion of the underlying image content to \
-                                                                            be returned (x,y,w,h). Use [pct:x,y,w,h] to select point.\
-                                                                             Default value is [full], [square] to \
-                                                                             determine area where the width\
-                                                                            and height are both equal.")
+@click.option("-R", "--region", "region", type=str, default="full", help="The region parameter defines the "
+                                                                         "rectangular  portion of the underlying "
+                                                                         "image content to  be returned (x,y,w,"
+                                                                         "h). Use [pct:x,y,w,h] to select point. "
+                                                                         "Default value is [full], [square] to  "
+                                                                         "determine area where the width and height "
+                                                                         "are both equal.")
 @click.option("-f", "--format", "format",
               type=click.Choice(['default', 'jpg', 'tif', 'png', 'gif', 'jp2', 'pdf', 'webp']),
               default="default", help="Select image format.")
@@ -152,9 +158,15 @@ def iiif_singular(url, **kwargs):
 @click.option("--filename", "filename", type=bool, is_flag=True,
               help="To obtain a simplified image name (for manifests)")
 @click.option('--retry', 'retry', type=int, default=10,
-              help="Option to readjust the number of tries for asynchronous requests. A large number of requests can unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
+              help="Option to readjust the number of tries for asynchronous requests. A large number of requests can "
+                   "unnecessarily increase the process. The best practice is to test in the classic phase. If the "
+                   "logs indicate a connection error, check whether the links work via your browser. If so, "
+                   "increase accordingly.")
 @click.option('--delay', 'delay', type=int, default=5,
-              help="Option to readjust the delay between repetitions of asynchronous requests. Delaying a request may unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
+              help="Option to readjust the delay between repetitions of asynchronous requests. Delaying a request may "
+                   "unnecessarily increase the process. The best practice is to test in the classic phase. If the "
+                   "logs indicate a connection error, check whether the links work via your browser. If so, "
+                   "increase accordingly.")
 def iiif_list(file, **kwargs):
     """
     Process multiple IIIF URLs from a file.
@@ -178,7 +190,7 @@ def iiif_list(file, **kwargs):
     if file.endswith('.txt'):
         try:
             list_iiif.read_txt(file)
-            journal_error(level='INFO', message=f"Reading {file} succeed")
+            journal_error(level='INFO', object=file, message=f"Reading succeed")
         except Exception as err:
             journal_error(level='ERROR', object=file, message=str(err))
     # CSV
@@ -188,15 +200,16 @@ def iiif_list(file, **kwargs):
         print(f"delimiter : {DEFAULT_CSV[0]}")
         print(f"header : {DEFAULT_CSV[1]}")
         print(f"encoding: {DEFAULT_CSV[2]}")
-        journal_error(level='INFO', message=f"Parameters by default : delimiter : {DEFAULT_CSV[0]}, \
+        journal_error(level='INFO', object='Config csv reader', message=f"Parameters by default : delimiter : {DEFAULT_CSV[0]}, \
                         header : {DEFAULT_CSV[1]}, encoding: {DEFAULT_CSV[2]}")
         delimiter, header, encoding = prompt()
         try:
             list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
                                header=int(header))
         except KeyError as err:
-            journal_error(level='ERROR', object=file, message=str(err), complement_info='Impossible to find the column. Please '
-                                                                           'retake yours informations.')
+            journal_error(level='ERROR', object=file, message=str(err),
+                          complement_info='Impossible to find the column. Please '
+                                          'retake yours informations.')
             print('Impossible to find the column. Please retake yours informations.')
     # Invalid format
     else:
@@ -249,7 +262,7 @@ def get_list_image(url, **kwargs):
 
     URL: IIIF manifest URL.
     """
-    journal_error(level='INFO', message="############### Start collect get_list_image ###############")
+    journal_error(level='INFO', object='', message="############### Start collect get_list_image ###############")
     # Get path
     current_path = os.getcwd()
     if kwargs['directory'] != "./":
@@ -262,9 +275,10 @@ def get_list_image(url, **kwargs):
     manifest.save_metadata()
     manifest.save_manifest()
 
-    journal_error(level='INFO',
+    journal_error(level='INFO', object='',
                   message=f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
-    journal_error(level='INFO', message="############### Process collect get_list_image ending ###############")
+    journal_error(level='INFO', object='', message="############### Process collect get_list_image ending "
+                                                   "###############")
     print("Process collect get_list_image ending")
     print(f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
 
