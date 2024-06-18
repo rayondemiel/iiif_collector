@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 from .iiif import ImageIIIF, ManifestIIIF, ConfigIIIF
 from .variables import DEFAULT_OUT_DIR
-from scr.opt.utils import journal_error, randomized, make_out_dirs, url2filename
-from scr.opt.decorators import time_counter, performance
+from iiif_collector.opt.utils import journal_error, randomized, make_out_dirs, url2filename
+from iiif_collector.opt.decorators import time_counter, performance
 
 
 class IIIFCollector(object):

@@ -1,13 +1,16 @@
 import click
 import os
+import logging
 from requests import Session
 
-from scr.iiif import ManifestIIIF, ImageIIIF
-from scr.iiif_list import ListIIIF
-from scr.opt.terminal import prompt
-from scr.opt.utils import make_out_dirs
-from scr.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
-from scr.multiproc import ParallelizeIIIF
+from iiif_collector.exceptions import FormatInvalidException
+from iiif_collector.iiif import ManifestIIIF, ImageIIIF
+from iiif_collector.iiif_list import ListIIIF
+from iiif_collector.opt.terminal import prompt
+from iiif_collector.opt.utils import make_out_dirs, journal_error
+from iiif_collector.variables import DEFAULT_OUT_DIR, DEFAULT_CSV
+from iiif_collector.multiproc import ParallelizeIIIF
+
 
 @click.group()
 def run_collect():
@@ -18,7 +21,8 @@ def run_collect():
 @run_collect.command()
 @click.argument("url", type=click.STRING)
 @click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
-@click.option("-s", "--size", "size", type=str, default="max", help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change width. To more example, refer to image IIIF documentation.")
+@click.option("-s", "--size", "size", type=str, default="max",
+              help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change width. To more example, refer to image IIIF documentation.")
 @click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
               help="To change quality parameter determines whether the image is delivered in color, grayscale or black and white")
 @click.option("-r", "--rotation", "rotation", type=int, default=0, help="Rotation parameter specifies mirroring and \
@@ -40,7 +44,8 @@ def run_collect():
               help="To active selection of images to save by manifest")
 @click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
                                                                   "number indicated")
-@click.option("--filename", "filename", type=bool, is_flag=True, help="To obtain a simplified image name (for manifests)")
+@click.option("--filename", "filename", type=bool, is_flag=True,
+              help="To obtain a simplified image name (for manifests)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
 def iiif_singular(url, **kwargs):
     """
@@ -115,11 +120,11 @@ def iiif_singular(url, **kwargs):
     print("! Finish !")
 
 
-
 @run_collect.command()
 @click.argument("file", type=click.STRING)
 @click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
-@click.option("-s", "--size", "size", type=str, default="max", help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change width. To more example, refer to image IIIF documentation.")
+@click.option("-s", "--size", "size", type=str, default="max",
+              help="Parameter to resize image. Basic resize is ',640' to change height for 640 px or '640,' to change width. To more example, refer to image IIIF documentation.")
 @click.option("-q", "--quality", "quality", type=click.Choice(['native', 'gray', 'bitonal', 'color']), default="native",
               help="Width to resize image")
 @click.option("-r", "--rotation", "rotation", type=int, default=0, help="Rotation parameter specifies mirroring and \
@@ -141,11 +146,15 @@ def iiif_singular(url, **kwargs):
               help="To active selection of images to save by manifest")
 @click.option("--random", "random", type=bool, is_flag=True, help="To get randomize images according to the "
                                                                   "number indicated")
-@click.option("--case-insensitive", "case_insensitive", type=bool, is_flag=True, help="To disabled case sensitive for the name of your column (csv)")
+@click.option("--case-insensitive", "case_insensitive", type=bool, is_flag=True,
+              help="To disabled case sensitive for the name of your column (csv)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
-@click.option("--filename", "filename", type=bool, is_flag=True, help="To obtain a simplified image name (for manifests)")
-@click.option('--retry', 'retry', type=int, default=10, help="Option to readjust the number of tries for asynchronous requests. A large number of requests can unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
-@click.option('--delay', 'delay', type=int, default=5, help="Option to readjust the delay between repetitions of asynchronous requests. Delaying a request may unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
+@click.option("--filename", "filename", type=bool, is_flag=True,
+              help="To obtain a simplified image name (for manifests)")
+@click.option('--retry', 'retry', type=int, default=10,
+              help="Option to readjust the number of tries for asynchronous requests. A large number of requests can unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
+@click.option('--delay', 'delay', type=int, default=5,
+              help="Option to readjust the delay between repetitions of asynchronous requests. Delaying a request may unnecessarily increase the process. The best practice is to test in the classic phase. If the logs indicate a connection error, check whether the links work via your browser. If so, increase accordingly.")
 def iiif_list(file, **kwargs):
     """
     Process multiple IIIF URLs from a file.
@@ -165,23 +174,35 @@ def iiif_list(file, **kwargs):
 
     # Parsing file
     list_iiif = ListIIIF(case_insensitive=kwargs['case_insensitive'], verbose=kwargs['verbose'])
+    # TXT
     if file.endswith('.txt'):
-        list_iiif.read_txt(file)
+        try:
+            list_iiif.read_txt(file)
+            journal_error(level='INFO', message=f"Reading {file} succeed")
+        except Exception as err:
+            journal_error(level='ERROR', object=file, message=str(err))
+    # CSV
     elif file.endswith('.csv'):
         name_column = str(input("What is the name of iiif columns ? "))
         print("Parameters by default :")
         print(f"delimiter : {DEFAULT_CSV[0]}")
         print(f"header : {DEFAULT_CSV[1]}")
         print(f"encoding: {DEFAULT_CSV[2]}")
+        journal_error(level='INFO', message=f"Parameters by default : delimiter : {DEFAULT_CSV[0]}, \
+                        header : {DEFAULT_CSV[1]}, encoding: {DEFAULT_CSV[2]}")
         delimiter, header, encoding = prompt()
         try:
             list_iiif.read_csv(file, name_column, delimiter=delimiter.strip(), encoding=encoding.lower().strip(),
                                header=int(header))
-        except KeyError:
+        except KeyError as err:
+            journal_error(level='ERROR', object=file, message=str(err), complement_info='Impossible to find the column. Please '
+                                                                           'retake yours informations.')
             print('Impossible to find the column. Please retake yours informations.')
-
+    # Invalid format
     else:
-        raise FileExistsError("Sorry, your file need to be in csv or txt format.")
+        journal_error(level='ERROR', object=file, message=str(FileExistsError),
+                      complement_info="Sorry, your file need to be in csv or txt format.")
+        raise FormatInvalidException(file)
 
     if kwargs['image']:
         parallelization = ParallelizeIIIF(urls=list_iiif.url_iiif,
@@ -228,9 +249,9 @@ def get_list_image(url, **kwargs):
 
     URL: IIIF manifest URL.
     """
+    journal_error(level='INFO', message="############### Start collect get_list_image ###############")
     # Get path
     current_path = os.getcwd()
-    print(os.getcwd())
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
@@ -241,9 +262,14 @@ def get_list_image(url, **kwargs):
     manifest.save_metadata()
     manifest.save_manifest()
 
-    print("Finish")
+    journal_error(level='INFO',
+                  message=f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
+    journal_error(level='INFO', message="############### Process collect get_list_image ending ###############")
+    print("Process collect get_list_image ending")
     print(f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(filename='output/logfile.txt', level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
     run_collect()

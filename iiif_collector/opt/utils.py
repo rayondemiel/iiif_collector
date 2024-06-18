@@ -1,10 +1,11 @@
 import os
-import shutil
 import json
+import logging
 import random
+import shutil
 from urllib.parse import urlparse, quote, unquote
 
-from scr.variables import ImageList, MetadataList, CONFIG_FOLDER
+from iiif_collector.variables import ImageList, MetadataList, CONFIG_FOLDER
 
 
 def suppress_char(txt: str or dict) -> str or dict:
@@ -126,6 +127,12 @@ def randomized(image_list: ImageList, number: int) -> ImageList:
     return image_list[:min(number, len(image_list) - 1)]
 
 
-def journal_error(path, **kwargs):
-    with open(os.path.join(path, "logs.txt"), "a") as f:
-        f.writelines(f"""{kwargs["url"]} : error {kwargs['error']}\n""")
+def journal_error(level: str, **kwargs):
+    if level == 'ERROR':
+        logging.error(f"An error has occurred - {kwargs['object']} : {kwargs['message']}", exc_info=True)
+    elif level == 'WARNING':
+        logging.warning(f"{kwargs['url']} : {kwargs['message']}", exc_info=True)
+    elif level == 'INFO':
+        logging.info(f"{kwargs['url']} : {kwargs['message']}", exc_info=True)
+    if kwargs['complement_info']:
+        logging.info(str(kwargs['complement_info']), exc_info=True)

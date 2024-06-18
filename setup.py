@@ -26,7 +26,7 @@ setup(
     url=URL,
     packages=find_packages(exclude=('tests', '.env', 'env', 'venv',)),
     entry_points={
-        'console_scripts': ['iiif-collector=scr.cli.iiif_collector:run_collect'],
+        'console_scripts': ['iiif-collector=iiif_collector.cli.iiif_collector:run_collect'],
     },
     include_package_data=True,
     install_requires=requirements,

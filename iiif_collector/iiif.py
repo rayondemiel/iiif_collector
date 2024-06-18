@@ -5,7 +5,7 @@ import tqdm
 import re
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER, OUTPUT_LIST_TXT
-from scr.opt.utils import save_json, save_txt, randomized, journal_error, suppress_char, url2filename
+from iiif_collector.opt.utils import save_json, save_txt, randomized, journal_error, suppress_char, url2filename
 
 
 class ConfigIIIF(object):
