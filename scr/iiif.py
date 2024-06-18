@@ -109,7 +109,7 @@ class ImageIIIF(ConfigIIIF):
                     print(f"Succesing request image {str(self.id_img)} to {url}")
             else:
                 print(f"error request, {url}, {self.img.status_code}")
-                journal_error(self.out_dir, url=url, error=self.img.status_code)
+                self._log_error(url, self.img.status_code)
                 pass
         except requests.exceptions.RequestException as err:
             print(err)
@@ -118,44 +118,46 @@ class ImageIIIF(ConfigIIIF):
         """Format the url to request an image of a reasonable size"""
         # {scheme}://{server}{/prefix}/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
         # scheme, server, prefix, identifier, region, size, rotation, quality = [i for i in url.split('/') if i]
-        split = url.split('/')
+        url_parts = url.split('/')
         if self.verbose:
             print("configuration parameters API image")
-        split[-4] = str(self.config['region'])
-        split[-3] = str(self.config['size'])
-        split[-2] = str(self.config['rotation'])
-        split[-1] = self.change_format(split[-1])
+        url_parts[-4] = str(self.config['region'])
+        url_parts[-3] = str(self.config['size'])
+        url_parts[-2] = str(self.config['rotation'])
+        url_parts[-1] = self.change_format(url_parts[-1])
         if self.verbose:
             print("Finish configuration parameters API image")
-        return '/'.join(split)
+        return '/'.join(url_parts)
 
     def save_image(self):
         """
         save image to disk
         """
         out_path = os.path.join(self.out_dir, 'images')
-        if 200 <= self.img.status_code < 400:
-            with open(os.path.join(out_path, self.id_img + "." + self.config['format']), 'wb') as f:
-                self.img.raw.decode_content = True
-                shutil.copyfileobj(self.img.raw, f)
-        if self.verbose:
-            print(' * saving', out_path)
+        os.makedirs(out_path, exist_ok=True)
+        try:
+            if 200 <= self.img.status_code < 400:
+                with open(os.path.join(out_path, self.id_img + "." + self.config['format']), 'wb') as f:
+                    self.img.raw.decode_content = True
+                    shutil.copyfileobj(self.img.raw, f)
+            if self.verbose:
+                print(' * saving', out_path)
+        except (OSError, Exception) as err:
+            self._log_error(os.path.join(out_path, self.id_img + "." + self.config['format']), err)
 
-    def change_format(self, file: str):
+    def change_format(self, filename: str):
         """
         Change format image and transform last element in list
-        :param file: Get ultimate element in list split url
+        :param filename: Get ultimate element in list split url
         :return:
         """
-        file = file.split(".")
-        file[0] = self.config['quality']
-        # apply change extension
-        if self.config['format'] != 'default':
-            file[-1] = self.config['format']
-        # update config
-        else:
-            self.config['format'] = file[-1]
-        return '.'.join(file)
+        parts = filename.split(".")
+        parts[-1] = self.config['format'] if self.config['format'] != 'default' else parts[-1]
+        return '.'.join(parts)
+
+    def _log_error(self, url: str, error: int or str):
+        """Log errors encountered during image loading"""
+        journal_error(self.out_dir, url=url, error=error)
 
 
 class ManifestIIIF(ConfigIIIF):
