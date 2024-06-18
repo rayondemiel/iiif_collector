@@ -22,6 +22,8 @@ class ConfigIIIF(object):
         self.verbose = kwargs.get('verbose', False)
         if 'short_filename' in kwargs:
             self.short_filename = kwargs['short_filename']
+        else:
+            self.short_filename = True
 
     def __config__(self):
         print(f"Api level is {str(self.API)}. \n"
