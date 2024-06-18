@@ -41,6 +41,7 @@ def suppress_char(txt: str or dict) -> str or dict:
         return cleaned_dict
 
     else:
+        journal_error(level='ERROR', object=txt, message='Input must be a string or a dictionary.')
         raise TypeError("Input must be a string or a dictionary containing strings.")
 
 def url2filename(url: str) -> str:
@@ -78,6 +79,7 @@ def cleaning_folder(path):
                 elif os.path.isdir(file_path):
                     shutil.rmtree(file_path)
             except Exception as e:
+                journal_error(level='ERROR', object=str(path), message="Failed to delete to delete dir - " + str(e))
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
@@ -91,7 +93,8 @@ def save_json(iiif_json: dict, file_path: str, ):
         with open(os.path.join(file_path, "manifest_IIIF.json"), mode="w") as f:
             json.dump(iiif_json, f, indent=3, ensure_ascii=False)
     except Exception as e:
-        print('Failed to delete %s. Reason: %s' % (file_path, e))
+        journal_error(level='ERROR', object="manifest_IIIF.json", message="Failed to save json - " + str(e))
+        print('Failed to save json %s. Reason: %s' % (file_path, e))
 
 
 def save_txt(list_mtda: MetadataList, file_path):
@@ -99,7 +102,8 @@ def save_txt(list_mtda: MetadataList, file_path):
         with open(os.path.join(file_path, "metadata.txt"), 'w') as outfile:
             outfile.writelines((str(f"{i[0]} : {i[1]}") + '\n' for i in list_mtda))
     except Exception as e:
-        print('Failed to delete %s. Reason: %s' % (file_path, e))
+        journal_error(level='ERROR', object="metadata.txt", message="Failed to save metadata txt - " + str(e))
+        print('Failed to save metadata txt %s. Reason: %s' % (file_path, e))
 
 
 def make_out_dirs(path, api=False):
