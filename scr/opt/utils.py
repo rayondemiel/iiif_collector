@@ -7,18 +7,40 @@ from urllib.parse import urlparse, quote, unquote
 from scr.variables import ImageList, MetadataList, CONFIG_FOLDER
 
 
-def suppress_char(txt):
+def suppress_char(txt: str or dict) -> str or dict:
     """
-    Function to remove special characters
-    :param txt: str, line to need cleanup
-    :return: str, txt cleaned
+    Function to remove special characters from a string or all strings within a dictionary.
+
+    :param txt: str or dict, the input string or dictionary to clean up
+    :return: str or dict, the cleaned string or dictionary with cleaned strings
     """
-    txt = txt.rstrip()
-    punctuation = "!:;\",?’.⁋ "
-    for sign in punctuation:
-        txt = txt.replace(sign, "_")
-        txt = txt.replace("__", "_")
-    return txt
+
+    def clean_string(s: str) -> str:
+        s = s.rstrip()
+        punctuation = "!:;\",?’.⁋ "
+        for sign in punctuation:
+            s = s.replace(sign, "_")
+            s = s.replace("__", "_")
+        return s
+
+    if isinstance(txt, str):
+        return clean_string(txt)
+
+    elif isinstance(txt, dict):
+        cleaned_dict = {}
+        for key, value in txt.items():
+            cleaned_key = clean_string(key)
+            if isinstance(value, str):
+                cleaned_value = clean_string(value)
+            elif isinstance(value, list):
+                cleaned_value = [clean_string(item) if isinstance(item, str) else item for item in value]
+            else:
+                cleaned_value = value
+            cleaned_dict[cleaned_key] = cleaned_value
+        return cleaned_dict
+
+    else:
+        raise TypeError("Input must be a string or a dictionary containing strings.")
 
 def url2filename(url: str) -> str:
     """

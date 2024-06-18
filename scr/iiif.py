@@ -20,7 +20,8 @@ class ConfigIIIF(object):
 
     def __init__(self, **kwargs):
         self.verbose = kwargs.get('verbose', False)
-        self.short_filename = kwargs['short_filename']
+        if 'short_filename' in kwargs:
+            self.short_filename = kwargs['short_filename']
 
     def __config__(self):
         print(f"Api level is {str(self.API)}. \n"
@@ -186,7 +187,19 @@ class ManifestIIIF(ConfigIIIF):
         self.n = kwargs.get('n')
         self.random = kwargs.get('random', False)
         self._load_from_url(url)
-        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR, self.title)
+
+        # Get default value title
+        if isinstance(self.title, dict):
+            if 'en' in self.title:
+                title_value = self.title['en']
+            else:
+                title_value = next(iter(self.title.values()))
+        else:
+            title_value = self.title
+        if isinstance(title_value, list):
+            title_value = title_value[0]
+        self.out_dir = os.path.join(path, DEFAULT_OUT_DIR, title_value)
+        # Check if dir exist
         if os.path.isdir(self.out_dir) is False:
             os.makedirs(self.out_dir)
 
