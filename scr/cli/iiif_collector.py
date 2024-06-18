@@ -56,7 +56,7 @@ def iiif_singular(url, **kwargs):
         n = None
 
     # Get path
-    current_path = os.path.dirname(os.path.abspath(__file__))
+    current_path = os.getcwd()
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
@@ -159,7 +159,7 @@ def iiif_list(file, **kwargs):
         n = None
 
     # Get path
-    current_path = os.path.dirname(os.path.abspath(__file__))
+    current_path = os.getcwd()
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
@@ -230,7 +230,8 @@ def get_list_image(url, **kwargs):
     :return:
     """
     # Get path
-    current_path = os.path.dirname(os.path.abspath(__file__))
+    current_path = os.getcwd()
+    print(os.getcwd())
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
