@@ -101,21 +101,17 @@ class ImageIIIF(ConfigIIIF):
             if session is None:
                 self.img = requests.get(url, stream=True, allow_redirects=True)
             else:
-                assert type(session) == requests.Session, "Session need to be instanced"
+                assert isinstance(session, requests.Session), "Session need to be instanced"
                 self.img = session.get(url, stream=True, allow_redirects=True)
             # Check status request
             if 200 <= self.img.status_code < 400:
-                if ImageIIIF.verbose:
+                if self.verbose:
                     print(f"Succesing request image {str(self.id_img)} to {url}")
             else:
                 print(f"error request, {url}, {self.img.status_code}")
                 journal_error(self.out_dir, url=url, error=self.img.status_code)
                 pass
-        except requests.exceptions.Timeout as err:
-            print(err)
-        except requests.exceptions.TooManyRedirects as err:
-            print(err)
-        except requests.exceptions.ConnectionError as err:
+        except requests.exceptions.RequestException as err:
             print(err)
 
     def _format_url(self, url):
@@ -123,13 +119,13 @@ class ImageIIIF(ConfigIIIF):
         # {scheme}://{server}{/prefix}/{identifier}/{region}/{size}/{rotation}/{quality}.{format}
         # scheme, server, prefix, identifier, region, size, rotation, quality = [i for i in url.split('/') if i]
         split = url.split('/')
-        if ImageIIIF.verbose:
+        if self.verbose:
             print("configuration parameters API image")
         split[-4] = str(self.config['region'])
         split[-3] = str(self.config['size'])
         split[-2] = str(self.config['rotation'])
         split[-1] = self.change_format(split[-1])
-        if ImageIIIF.verbose:
+        if self.verbose:
             print("Finish configuration parameters API image")
         return '/'.join(split)
 
@@ -145,7 +141,7 @@ class ImageIIIF(ConfigIIIF):
         if self.verbose:
             print(' * saving', out_path)
 
-    def change_format(self, file):
+    def change_format(self, file: str):
         """
         Change format image and transform last element in list
         :param file: Get ultimate element in list split url
@@ -153,7 +149,7 @@ class ImageIIIF(ConfigIIIF):
         """
         file = file.split(".")
         file[0] = self.config['quality']
-        # apply change extensio
+        # apply change extension
         if self.config['format'] != 'default':
             file[-1] = self.config['format']
         # update config
