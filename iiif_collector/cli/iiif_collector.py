@@ -15,7 +15,8 @@ from iiif_collector.multiproc import ParallelizeIIIF
 @click.group()
 def run_collect():
     """CLI for collecting and downloading IIIF images, metadata, and manifests."""
-    pass
+    logging.basicConfig(filename=f'{os.getcwd()}/logfile.txt', level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 @run_collect.command()
@@ -285,6 +286,4 @@ def get_list_image(url, **kwargs):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(filename='output/logfile.txt', level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
     run_collect()

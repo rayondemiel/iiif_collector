@@ -138,5 +138,5 @@ def journal_error(level: str, **kwargs):
         logging.warning(f"{kwargs['object']} : {kwargs['message']}", exc_info=True)
     elif level == 'INFO':
         logging.info(f"{kwargs['object']} : {kwargs['message']}", exc_info=True)
-    if kwargs['complement_info']:
+    if 'complement_info' in kwargs:
         logging.info(str(kwargs['complement_info']), exc_info=True)
