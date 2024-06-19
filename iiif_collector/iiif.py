@@ -1,10 +1,13 @@
 import os
 import re
 import requests
+from rich.console import Group
+from rich.live import Live
 from rich import print
-from rich.progress import Progress
+from rich.progress import Progress, TextColumn, BarColumn, TimeRemainingColumn, TransferSpeedColumn, DownloadColumn, \
+    TimeElapsedColumn
 import shutil
-import tqdm
+import time
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER, OUTPUT_LIST_TXT
 from iiif_collector.opt.utils import save_json, save_txt, randomized, journal_error, suppress_char, url2filename
@@ -54,7 +57,8 @@ class ConfigIIIF(object):
         if cls.API < 3.0 and cls.config['size'] == "max":
             cls.config['size'] = "full"
 
-        journal_error(level='INFO', object='CONFIG IIIF', message=str(cls.config), complement_info="Updated IIIF configuration.")
+        journal_error(level='INFO', object='CONFIG IIIF', message=str(cls.config),
+                      complement_info="Updated IIIF configuration.")
         if cls.verbose:
             print("[blue]Updated IIIF configuration.[/]")
 
@@ -108,7 +112,8 @@ class ImageIIIF(ConfigIIIF):
                 self.img = session.get(url, stream=True, allow_redirects=True)
             # Check status request
             if 200 <= self.img.status_code < 400:
-                journal_error(level='INFO', object=url, message=str(self.img.status_code), complement_info=str(f"Succesing request image {str(self.id_img)}"))
+                journal_error(level='INFO', object=url, message=str(self.img.status_code),
+                              complement_info=str(f"Succesing request image {str(self.id_img)}"))
                 if self.verbose:
                     print(f"[blue]Succesing request image {str(self.id_img)} to {url}[/]")
             else:
@@ -236,7 +241,8 @@ class ManifestIIIF(ConfigIIIF):
         :return: Bool, true if manifest in self.json
         """
         if len(self.json) < 1:
-            journal_error(level='WARNING', object=self.url, message=str("Verify link or request. <ManifestIIIF._load_from_url>"))
+            journal_error(level='WARNING', object=self.url,
+                          message=str("Verify link or request. <ManifestIIIF._load_from_url>"))
             print(f"""[red]Verify link or request. [orange]<ManifestIIIF._load_from_url>[/] \n link : {self.url}[/]""")
             return False
         return True
@@ -268,11 +274,26 @@ class ManifestIIIF(ConfigIIIF):
             for canvas in self.json['sequences'][0]['canvases']
         ])
 
-    def save_image(self):
+    def save_images(self):
         """
         To save images referenced in IIIF manifest. All or partial (self.n).
         We activate the randomizer only on a partial selection of images, otherwise not useful.
         """
+        download_progress = Progress(TextColumn('[bold yellow]Downloading image {task.fields[filename]}'),
+                                     BarColumn(),
+                                     DownloadColumn(),
+                                     TransferSpeedColumn(),
+                                     TimeRemainingColumn(),
+                                     )
+        overall_progress = Progress(TextColumn('{task.description}'),
+                                    TimeElapsedColumn(),
+                                    BarColumn(),
+                                    TextColumn('{task.description}')
+                                    )
+        group = Group(
+            overall_progress,
+            download_progress,
+        )
 
         if self._json_present():
             images = self.get_images_from_manifest()
@@ -281,16 +302,44 @@ class ManifestIIIF(ConfigIIIF):
             elif self.n is not None:
                 images = zip(images, range(min(self.n, len(images) - 1)))
 
-            with tqdm.tqdm(total=len(list(images)), desc='Saving images', unit='images') as pbar:
+            with Progress() as progress:
+                task1 = progress.add_task("[cyan]Saving images from manifest IIIF", total=len(images))
                 for url, filename in images:
                     image = ImageIIIF(url, self.out_dir, short_filename=self.short_filename)
                     image.config = self.config
+                    start_time = time.time()
                     if self.session is not None:
                         image.load_image(filename=filename, session=self.session)
                     else:
                         image.load_image(filename=filename)
+
+                    total_size = int(image.img.headers.get('Content-Length', 0))
+                    print(total_size)
+                    task2 = progress.add_task("[cyan]Downloading image", total=total_size)
+
+                    for chunk in image.img.iter_content(chunk_size=8192):
+                        if chunk:
+                            progress.update(task2, advance=len(chunk))
+
                     image.save_image()
-                    pbar.update(1)
+                    progress.update(task1, advance=1)
+
+                    # Calculate download speed in MB/s
+                    elapsed_time = time.time() - start_time
+                    download_speed = total_size / elapsed_time if elapsed_time > 0 else 0
+                    download_speed_mb = download_speed / (1024 * 1024)
+
+                    # Update the second progress bar with download speed
+                    progress.update(task2, completed=total_size, refresh=True)
+                    progress.update(task2, description=f"[cyan]Download speed: {download_speed_mb:.2f} MB/s")
+
+                    # Calculate images per second for the first progress bar
+                    elapsed_time_total = time.time() - start_time
+                    images_per_second = progress.tasks[
+                                            0].completed / elapsed_time_total if elapsed_time_total > 0 else 0
+                    progress.update(task1,
+                                    description=f"[cyan]Saving images from manifest IIIF ({images_per_second:.2f} images/s)")
+
             journal_error(level='INFO', object=url, message=str("Image saved"))
             if self.verbose:
                 print('[green]Finished saving images![/]')
