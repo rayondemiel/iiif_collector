@@ -88,9 +88,13 @@ class ImageIIIFAsync(ImageIIIF):
         :param max_retries: int, the maximum number of retries for loading the image.
         :param retry_delay: int, the delay in seconds between retries.
         """
-        url = self._format_url(self.url)
+        try:
+            url = self._format_url(self.url)
+        except IndexError:
+            url = self.url
+            journal_error(level='ERROR', object=self.url, message="Impossible to split URL parameters IIIF with _format_url()")
         if self.verbose:
-            print(f"[plum2 italic]url[/]")
+            print(f"[plum2 italic]{url}[/]")
 
         # Get filename
         if filename is not None and self.short_filename is True:
@@ -130,7 +134,7 @@ class ImageIIIFAsync(ImageIIIF):
                                 print(f"[red]Error processing URL: {url}. Status code: {response.status}. END[/]")
             except aiohttp.ClientError:
                 journal_error(level="WARNING", object=self.url,
-                              message=f"Retrying after a delay... code error: {response.status}")
+                              message=f"Retrying after a delay...")
                 if self.verbose:
                     print(f"[red]Error processing URL: {url}. Retrying after a delay...[/]")
                 if retry_count < max_retries:
@@ -138,8 +142,9 @@ class ImageIIIFAsync(ImageIIIF):
                 else:
                     journal_error(level="ERROR", object=url, error="ClientError")
             except Exception as err:
-                print(f"[red]Error processing URL: {url}. Exception: {err}")
-                journal_error(level="ERROR", object=url, error=str(err))
+                if self.verbose:
+                    print(f"[red]Error processing URL: {url}. Exception: {err}")
+                journal_error(level="ERROR", object=self.url, error=str(err))
 
 
 class ParallelizeIIIF(ConfigIIIF):
