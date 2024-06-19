@@ -1,8 +1,10 @@
 import click
-import os
+from importlib.metadata import version
 import logging
+import os
 from requests import Session
 from rich import print
+from rich.panel import Panel
 
 from iiif_collector.exceptions import FormatInvalidException
 from iiif_collector.iiif import ManifestIIIF, ImageIIIF
@@ -16,11 +18,14 @@ from iiif_collector.multiproc import ParallelizeIIIF
 @click.group()
 def run_collect():
     """CLI for collecting and downloading IIIF images, metadata, and manifests."""
+    ctx = click.get_current_context()
     logging.basicConfig(filename=f'{os.getcwd()}/logfile.txt', level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s')
+    ctx.meta['pkg_version'] = version('IIIF_Collector')
 
 
 @run_collect.command()
+@click.pass_context
 @click.argument("url", type=click.STRING)
 @click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
 @click.option("-s", "--size", "size", type=str, default="max",
@@ -51,7 +56,7 @@ def run_collect():
 @click.option("--filename", "filename", type=bool, is_flag=True,
               help="To obtain a simplified image name (for manifests)")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
-def iiif_singular(url, **kwargs):
+def iiif_singular(ctx, url, **kwargs):
     """
     Running script to get and download iiif images, metadata and manifests. If you want access to specific image IIIF,
     you must activate the option.
@@ -118,16 +123,21 @@ def iiif_singular(url, **kwargs):
         journal_error(level='INFO', object=manifest.out_dir, message="Creating directory to IIIF files")
         if kwargs['verbose']:
             print("[blue]Creating directory to IIIF files[/]")
+        out_dir = manifest.out_dir
         make_out_dirs(manifest.out_dir)
         # Get manifest, metadata and images
         manifest.save_manifest()
         manifest.save_metadata()
         manifest.save_image()
 
-    print("[green bold]Job collect completed ![/]")
+    print(Panel(f"[blue]You can find all images at the following path : \
+                        [medium_purple1]<{out_dir}/[MANIFEST/IMAGES]/images/)>[/][/]",
+                title="[green bold]Job completed [italic]iiif_singular()[/][/]",
+                subtitle=f"IIIF_Collector v. {ctx.meta['pkg_version']}"))
 
 
 @run_collect.command()
+@click.pass_context
 @click.argument("file", type=click.STRING)
 @click.option("-i", "--image", "image", type=bool, default=False, is_flag=True, help="Active image api")
 @click.option("-s", "--size", "size", type=str, default="max",
@@ -170,7 +180,7 @@ def iiif_singular(url, **kwargs):
                    "unnecessarily increase the process. The best practice is to test in the classic phase. If the "
                    "logs indicate a connection error, check whether the links work via your browser. If so, "
                    "increase accordingly.")
-def iiif_list(file, **kwargs):
+def iiif_list(ctx, file, **kwargs):
     """
     Process multiple IIIF URLs from a file.
     FILE: Path to file containing IIIF URLs (TXT or CSV format).
@@ -203,7 +213,8 @@ def iiif_list(file, **kwargs):
         print(f"delimiter : {DEFAULT_CSV[0]}")
         print(f"header : {DEFAULT_CSV[1]}")
         print(f"encoding: {DEFAULT_CSV[2]}")
-        journal_error(level='INFO', object='Config csv reader', message=f"Parameters by default : delimiter : {DEFAULT_CSV[0]}, \
+        journal_error(level='INFO', object='Config csv reader',
+                      message=f"Parameters by default : delimiter : {DEFAULT_CSV[0]}, \
                         header : {DEFAULT_CSV[1]}, encoding: {DEFAULT_CSV[2]}")
         delimiter, header, encoding = prompt()
         try:
@@ -251,16 +262,21 @@ def iiif_list(file, **kwargs):
                                             quality=kwargs['quality'],
                                             format=kwargs['format'])
         parallelization.run()
-    print("[green bold]The job  collect has been completed ![/]")
+
+    print(Panel(f"[blue]You can find all images at the following path : \
+                            [medium_purple1]<{parallelization.out_dir}/[MANIFEST/IMAGES]/images/)>[/][/]",
+                title="[green bold]Job completed [italic]iiif_list()[/][/]",
+                subtitle=f"IIIF_Collector v. {ctx.meta['pkg_version']}"))
 
 
 @run_collect.command()
+@click.pass_context
 @click.argument("url", type=click.STRING)
 @click.option("-d", "--directory", "directory", type=click.Path(exists=True, dir_okay=True, file_okay=False),
               default="./",
               help="Directory where to save the images")
 @click.option("-v", "--verbose", "verbose", type=bool, is_flag=True, help="Get more verbosity")
-def get_list_image(url, **kwargs):
+def get_list_image(ctx, url, **kwargs):
     """
     Retrieve and save a list of images from a IIIF manifest.
 
@@ -283,9 +299,10 @@ def get_list_image(url, **kwargs):
                   message=f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
     journal_error(level='INFO', object='', message="############### Process collect get_list_image ending "
                                                    "###############")
-    print("[green bold]Process collect get_list_image ending[/]")
-    print(f"""[blue]You can find the file at the following path : \
-               [medium_purple1]<{manifest.__print_path__('images')}>[/][/]""")
+    print(Panel(f"[blue]You can find the file at the following path : \
+                            [medium_purple1]<{manifest.__print_path__('images')}>[/][/]",
+                title="[green bold]Job completed [italic]get_list_image()[/][/]",
+                subtitle=f"IIIF_Collector v. {ctx.meta['pkg_version']}"))
 
 
 if __name__ == "__main__":
