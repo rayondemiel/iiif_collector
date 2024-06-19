@@ -8,3 +8,5 @@ data/
 *.pyc
 venv/
 logfile.txt
+*.egg-info/
+build/
