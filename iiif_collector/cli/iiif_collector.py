@@ -19,7 +19,9 @@ from iiif_collector.multiproc import ParallelizeIIIF
 def run_collect():
     """CLI for collecting and downloading IIIF images, metadata, and manifests."""
     ctx = click.get_current_context()
-    logging.basicConfig(filename=f'{os.getcwd()}/logfile.txt', level=logging.INFO,
+    current_path = os.getcwd()
+    ctx.meta['current_path'] = os.getcwd()
+    logging.basicConfig(filename=f"{ctx.meta['current_path']}/logfile.txt", level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s')
     ctx.meta['pkg_version'] = version('IIIF_Collector')
 
@@ -71,7 +73,7 @@ def iiif_singular(ctx, url, **kwargs):
         n = None
 
     # Get path
-    current_path = os.getcwd()
+    current_path = ctx.meta['current_path']
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
@@ -193,7 +195,7 @@ def iiif_list(ctx, file, **kwargs):
         n = None
 
     # Get path
-    current_path = os.getcwd()
+    current_path = ctx.meta['current_path']
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
@@ -284,7 +286,7 @@ def get_list_image(ctx, url, **kwargs):
     """
     journal_error(level='INFO', object='', message="############### Start collect get_list_image ###############")
     # Get path
-    current_path = os.getcwd()
+    current_path = ctx.meta['current_path']
     if kwargs['directory'] != "./":
         current_path = os.path.join(current_path, kwargs['directory'])
 
