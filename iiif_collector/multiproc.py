@@ -89,7 +89,7 @@ class ImageIIIFAsync(ImageIIIF):
         """
         url = self._format_url(self.url)
         if self.verbose:
-            print(url)
+            print(f"[plum2 italic]url[/]")
 
         # Get filename
         if filename is not None and self.short_filename is True:
@@ -104,37 +104,40 @@ class ImageIIIFAsync(ImageIIIF):
                         # Process the response data
                         journal_error(level="INFO", object=self.id_img, message=f"Processing image from {url}")
                         if self.verbose:
-                            print(f"Processing image {self.id_img} from {url}")
+                            print(f"[blue]Processing image {self.id_img} from {url}[/]")
                         async with aiofiles.open(
                                 os.path.join(self.out_dir, self.id_img + "." + self.config['format']),
                                 mode='wb') as f:
                             await f.write(await response.read())
                         journal_error(level="INFO", object=self.id_img, message=f"* saving")
                         if self.verbose:
-                            print(' * saving', self.out_dir)
+                            print(f'[cyan] * saving {self.out_dir}[/]')
                         break  # Successful response, exit the retry loop
                     else:
-
-                        print(f"Error processing URL: {url}. Status code: {response.status}")
+                        if self.verbose:
+                            print(f"[orange1]Error processing URL: {url}. Status code: {response.status}[/]")
                         if retry_count < max_retries:
                             journal_error(level="WARNING", object=self.url,
                                           message=f"Retrying after a delay... code error: {response.status}")
-                            print(f"Retrying after a delay...")
+                            if self.verbose:
+                                print(f"[orange1]Retrying after a delay...[/]")
                             await asyncio.sleep(retry_delay)
                         else:
                             journal_error(level="ERROR", object=url, message=response.status,
                                           complement_info="Impossible to get image")
+                            if self.verbose:
+                                print(f"[red]Error processing URL: {url}. Status code: {response.status}. END[/]")
             except aiohttp.ClientError:
                 journal_error(level="WARNING", object=self.url,
                               message=f"Retrying after a delay... code error: {response.status}")
                 if self.verbose:
-                    print(f"Error processing URL: {url}. Retrying after a delay...")
+                    print(f"[red]Error processing URL: {url}. Retrying after a delay...[/]")
                 if retry_count < max_retries:
                     await asyncio.sleep(retry_delay)
                 else:
                     journal_error(level="ERROR", object=url, error="ClientError")
             except Exception as err:
-                print(f"Error processing URL: {url}. Exception: {err}")
+                print(f"[red]Error processing URL: {url}. Exception: {err}")
                 journal_error(level="ERROR", object=url, error=str(err))
 
 
@@ -189,7 +192,7 @@ class ParallelizeIIIF(ConfigIIIF):
             journal_error(level="INFO", object=manifest.out_dir,
                           message=f"Creating directory to IIIF files succeed")
             if self.verbose:
-                print("Creating directory to IIIF files")
+                print("[blue]Creating directory to IIIF files[/]")
             # Get manifest, metadata and images
             manifest.save_manifest()
             manifest.save_metadata()

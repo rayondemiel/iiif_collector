@@ -1,7 +1,7 @@
 import shutil
 import requests
 import os
-import tqdm
+from rich.progress import Progress
 import re
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER, OUTPUT_LIST_TXT

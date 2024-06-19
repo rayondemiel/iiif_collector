@@ -2,6 +2,7 @@ import click
 import os
 import logging
 from requests import Session
+from rich import print
 
 from iiif_collector.exceptions import FormatInvalidException
 from iiif_collector.iiif import ManifestIIIF, ImageIIIF
@@ -79,7 +80,7 @@ def iiif_singular(url, **kwargs):
         make_out_dirs(image.out_dir)
         journal_error(level='INFO', object=image.out_dir, message="Creating directory to IIIF files")
         if kwargs['verbose']:
-            print("Creating directory to IIIF files")
+            print("[blue]Creating directory to IIIF files[/]")
         # Change api configuration
         if kwargs['api'] != 3.0:
             image.api_mode(kwargs['api'])
@@ -116,14 +117,14 @@ def iiif_singular(url, **kwargs):
                                      )
         journal_error(level='INFO', object=manifest.out_dir, message="Creating directory to IIIF files")
         if kwargs['verbose']:
-            print("Creating directory to IIIF files")
+            print("[blue]Creating directory to IIIF files[/]")
         make_out_dirs(manifest.out_dir)
         # Get manifest, metadata and images
         manifest.save_manifest()
         manifest.save_metadata()
         manifest.save_image()
 
-    print("! Finish !")
+    print("[green]Work completed ![/]")
 
 
 @run_collect.command()
@@ -212,7 +213,7 @@ def iiif_list(file, **kwargs):
             journal_error(level='ERROR', object=file, message=str(err),
                           complement_info='Impossible to find the column. Please '
                                           'retake yours informations.')
-            print('Impossible to find the column. Please retake yours informations.')
+            print('[red]Impossible to find the column. Please retake yours informations.[/]')
     # Invalid format
     else:
         journal_error(level='ERROR', object=file, message=str(FileExistsError),
@@ -281,8 +282,8 @@ def get_list_image(url, **kwargs):
                   message=f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
     journal_error(level='INFO', object='', message="############### Process collect get_list_image ending "
                                                    "###############")
-    print("Process collect get_list_image ending")
-    print(f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
+    print("[green]Process collect get_list_image ending[/]")
+    print(f"""[blue]You can find the file at the following path : <{manifest.__print_path__('images')}>[/]""")
 
 
 if __name__ == "__main__":
