@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import random
+from rich import print
 import shutil
 from urllib.parse import urlparse, quote, unquote
 

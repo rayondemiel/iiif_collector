@@ -124,7 +124,7 @@ def iiif_singular(url, **kwargs):
         manifest.save_metadata()
         manifest.save_image()
 
-    print("[green]Work completed ![/]")
+    print("[green bold]Job collect completed ![/]")
 
 
 @run_collect.command()
@@ -251,6 +251,7 @@ def iiif_list(file, **kwargs):
                                             quality=kwargs['quality'],
                                             format=kwargs['format'])
         parallelization.run()
+    print("[green bold]The job  collect has been completed ![/]")
 
 
 @run_collect.command()
@@ -282,8 +283,9 @@ def get_list_image(url, **kwargs):
                   message=f"""You can find the file at the following path : <{manifest.__print_path__('images')}>""")
     journal_error(level='INFO', object='', message="############### Process collect get_list_image ending "
                                                    "###############")
-    print("[green]Process collect get_list_image ending[/]")
-    print(f"""[blue]You can find the file at the following path : <{manifest.__print_path__('images')}>[/]""")
+    print("[green bold]Process collect get_list_image ending[/]")
+    print(f"""[blue]You can find the file at the following path : \
+               [medium_purple1]<{manifest.__print_path__('images')}>[/][/]""")
 
 
 if __name__ == "__main__":

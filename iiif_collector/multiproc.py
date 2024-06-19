@@ -4,6 +4,7 @@ import aiofiles
 import multiprocessing
 import psutil
 import os
+from rich import print
 import sys
 from tqdm import tqdm
 

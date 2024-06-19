@@ -1,6 +1,7 @@
 import shutil
 import requests
 import os
+from rich import print
 from rich.progress import Progress
 import re
 
@@ -54,7 +55,7 @@ class ConfigIIIF(object):
 
         journal_error(level='INFO', object='CONFIG IIIF', message=str(cls.config), complement_info="Updated IIIF configuration.")
         if cls.verbose:
-            print("Updated IIIF configuration.")
+            print("[blue]Updated IIIF configuration.[/]")
 
     @classmethod
     def api_mode(cls, level: float):
@@ -65,7 +66,7 @@ class ConfigIIIF(object):
         """
         cls.API = level
         if cls.verbose and cls.API != 3.0:
-            print(f"Changing API level to {str(level)}")
+            print(f"[blue]Changing API level to {str(level)}[/]")
 
 
 class ImageIIIF(ConfigIIIF):
@@ -202,7 +203,7 @@ class ManifestIIIF(ConfigIIIF):
         url: str, manifest's url
         """
         if self.verbose:
-            print(' * loading manifest from url', url)
+            print(f'[blue]* loading manifest from url {url}[/]')
         try:
             if self.session is not None:
                 assert isinstance(self.session, requests.Session), "Session need to be instanced"
@@ -235,7 +236,7 @@ class ManifestIIIF(ConfigIIIF):
         """
         if len(self.json) < 1:
             journal_error(level='WARNING', object=self.url, message=str("Verify link or request. <ManifestIIIF._load_from_url>"))
-            print(f"""Verify link or request. <ManifestIIIF._load_from_url> \n link : {self.url}""")
+            print(f"""[red]Verify link or request. [orange]<ManifestIIIF._load_from_url>[/] \n link : {self.url}[/]""")
             return False
         return True
 
@@ -253,7 +254,7 @@ class ManifestIIIF(ConfigIIIF):
             save_json(iiif_json=self.json, file_path=out_path)
             if self.verbose:
                 journal_error(level='INFO', object=self.url, message=str("Manifest saved"))
-                print('Finished saving manifests!')
+                print('[green]Finished saving manifests![/]')
 
     def get_images_from_manifest(self) -> ImageList:
         """ Gets a URI, read the manifest
@@ -291,7 +292,7 @@ class ManifestIIIF(ConfigIIIF):
                     pbar.update(1)
             journal_error(level='INFO', object=url, message=str("Image saved"))
             if self.verbose:
-                print('Finished saving images!')
+                print('[green]Finished saving images![/]')
 
     def save_list_images(self):
         """Save a list of images to disk."""
@@ -315,7 +316,7 @@ class ManifestIIIF(ConfigIIIF):
             mtda = self._get_metadata()
             save_txt(list_mtda=mtda, file_path=out_path)
             if self.verbose:
-                print('Finished saving metadata!')
+                print('[green]Finished saving metadata![/]')
 
     def __print_path__(self, idx: str) -> str:
         """
