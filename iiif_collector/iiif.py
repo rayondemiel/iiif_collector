@@ -93,7 +93,7 @@ class ImageIIIF(ConfigIIIF):
     def __str__(self):
         print(f"URL api image is : {self.url}")
 
-    def load_image(self, session=None, filename=None):
+    def load_image(self, session=None, filename=None, download_progress=None, task_id=None):
         """Load a IIIF image from a url"""
         url = self._format_url(self.url)
         if self.verbose:
@@ -279,17 +279,19 @@ class ManifestIIIF(ConfigIIIF):
         To save images referenced in IIIF manifest. All or partial (self.n).
         We activate the randomizer only on a partial selection of images, otherwise not useful.
         """
-        download_progress = Progress(TextColumn('[bold yellow]Downloading image {task.fields[filename]}'),
-                                     BarColumn(),
-                                     DownloadColumn(),
-                                     TransferSpeedColumn(),
-                                     TimeRemainingColumn(),
-                                     )
-        overall_progress = Progress(TextColumn('{task.description}'),
-                                    TimeElapsedColumn(),
-                                    BarColumn(),
-                                    TextColumn('{task.description}')
-                                    )
+        download_progress = Progress(
+            TextColumn('[bold yellow]Downloading image {task.fields[filename]}'),
+            BarColumn(),
+            TransferSpeedColumn(),
+            TimeRemainingColumn(),
+        )
+        overall_progress = Progress(
+            TextColumn('{task.description}'),
+            TextColumn('{task.fields[images_per_second]:>5.2f} images/s'),
+            TimeElapsedColumn(),
+            BarColumn(),
+            TextColumn('[pink]{task.percentage:>3.0f}%'),
+            TextColumn('[cyan]{task.completed}/{task.total} images'))
         group = Group(
             overall_progress,
             download_progress,
@@ -302,8 +304,11 @@ class ManifestIIIF(ConfigIIIF):
             elif self.n is not None:
                 images = zip(images, range(min(self.n, len(images) - 1)))
 
-            with Progress() as progress:
-                task1 = progress.add_task("[cyan]Saving images from manifest IIIF", total=len(images))
+            with Live(group, refresh_per_second=10):
+                task1 = overall_progress.add_task("[cyan]Saving images from manifest IIIF",
+                                                  total=len(images),
+                                                  images_per_second=0.0)
+                start_time_total = time.time()
                 for url, filename in images:
                     image = ImageIIIF(url, self.out_dir, short_filename=self.short_filename)
                     image.config = self.config
@@ -314,15 +319,18 @@ class ManifestIIIF(ConfigIIIF):
                         image.load_image(filename=filename)
 
                     total_size = int(image.img.headers.get('Content-Length', 0))
-                    print(total_size)
-                    task2 = progress.add_task("[cyan]Downloading image", total=total_size)
+                    task2 = download_progress.add_task(
+                        "[cyan]Downloading image",
+                        total=total_size,
+                        filename=filename
+                    )
 
                     for chunk in image.img.iter_content(chunk_size=8192):
                         if chunk:
-                            progress.update(task2, advance=len(chunk))
+                            download_progress.update(task2, advance=len(chunk))
 
                     image.save_image()
-                    progress.update(task1, advance=1)
+                    overall_progress.update(task1, advance=1)
 
                     # Calculate download speed in MB/s
                     elapsed_time = time.time() - start_time
@@ -330,15 +338,21 @@ class ManifestIIIF(ConfigIIIF):
                     download_speed_mb = download_speed / (1024 * 1024)
 
                     # Update the second progress bar with download speed
-                    progress.update(task2, completed=total_size, refresh=True)
-                    progress.update(task2, description=f"[cyan]Download speed: {download_speed_mb:.2f} MB/s")
+                    download_progress.update(task2, completed=total_size, refresh=True)
+                    download_progress.update(task2, description=f"[cyan]Download speed: {download_speed_mb:.2f} MB/s")
+                    download_progress.stop_task(task2)
+                    download_progress.update(task2, visible=False)
 
                     # Calculate images per second for the first progress bar
-                    elapsed_time_total = time.time() - start_time
-                    images_per_second = progress.tasks[
+                    elapsed_time_total = time.time() - start_time_total
+                    images_per_second = overall_progress.tasks[
                                             0].completed / elapsed_time_total if elapsed_time_total > 0 else 0
-                    progress.update(task1,
-                                    description=f"[cyan]Saving images from manifest IIIF ({images_per_second:.2f} images/s)")
+                    overall_progress.update(task1, images_per_second=images_per_second)
+                    """elapsed_time_total = time.time() - start_time_total
+                    images_per_second = overall_progress.tasks[
+                                            0].completed / elapsed_time_total if elapsed_time_total > 0 else 0
+                    overall_progress.update(task1,
+                                    description=f"[cyan]Saving images from manifest IIIF ({images_per_second:.2f} images/s)")"""
 
             journal_error(level='INFO', object=url, message=str("Image saved"))
             if self.verbose:
