@@ -130,7 +130,7 @@ def iiif_singular(ctx, url, **kwargs):
         # Get manifest, metadata and images
         manifest.save_manifest()
         manifest.save_metadata()
-        manifest.save_image()
+        manifest.save_images()
 
     print(Panel(f"[blue]You can find all images at the following path : \
                         [medium_purple1]<{out_dir}/images/)>[/][/]",
