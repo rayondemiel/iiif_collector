@@ -133,7 +133,7 @@ def iiif_singular(ctx, url, **kwargs):
         manifest.save_image()
 
     print(Panel(f"[blue]You can find all images at the following path : \
-                        [medium_purple1]<{out_dir}/[MANIFEST/IMAGES]/images/)>[/][/]",
+                        [medium_purple1]<{out_dir}/images/)>[/][/]",
                 title="[green bold]Job completed [italic]iiif_singular()[/][/]",
                 subtitle=f"IIIF_Collector v. {ctx.meta['pkg_version']}"))
 
