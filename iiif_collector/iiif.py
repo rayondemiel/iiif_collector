@@ -1,9 +1,10 @@
-import shutil
-import requests
 import os
+import re
+import requests
 from rich import print
 from rich.progress import Progress
-import re
+import shutil
+import tqdm
 
 from .variables import DEFAULT_OUT_DIR, ImageList, MetadataList, CONFIG_FOLDER, OUTPUT_LIST_TXT
 from iiif_collector.opt.utils import save_json, save_txt, randomized, journal_error, suppress_char, url2filename
@@ -27,8 +28,8 @@ class ConfigIIIF(object):
             self.short_filename = True
 
     def __config__(self):
-        print(f"Api level is {str(self.API)}. \n"
-              f"Configuration is {str(self.config)}")
+        print(f"[blue]Api level is [pink]{str(self.API)}[/]. \n[/]"
+              f"[blue]Configuration is [pink]{str(self.config)}[/][/]")
 
     @staticmethod
     def __get_id__(name):
@@ -109,9 +110,9 @@ class ImageIIIF(ConfigIIIF):
             if 200 <= self.img.status_code < 400:
                 journal_error(level='INFO', object=url, message=str(self.img.status_code), complement_info=str(f"Succesing request image {str(self.id_img)}"))
                 if self.verbose:
-                    print(f"Succesing request image {str(self.id_img)} to {url}")
+                    print(f"[blue]Succesing request image {str(self.id_img)} to {url}[/]")
             else:
-                print(f"error request, {url}, {self.img.status_code}")
+                print(f"[red]error request, {url}, {self.img.status_code}[/]")
                 self._log_error(url, self.img.status_code)
                 pass
         except requests.exceptions.RequestException as err:
@@ -128,7 +129,7 @@ class ImageIIIF(ConfigIIIF):
         url_parts[-2] = str(self.config['rotation'])
         url_parts[-1] = self.change_format(url_parts[-1])
         if self.verbose:
-            print("Finish configuration parameters API image")
+            print("[blue]Finish configuration parameters API image[/]")
         return '/'.join(url_parts)
 
     def save_image(self):
@@ -144,7 +145,7 @@ class ImageIIIF(ConfigIIIF):
                     shutil.copyfileobj(self.img.raw, f)
                 journal_error(level='INFO', object=self.id_img + "." + self.config['format'], message=str('* saving'))
             if self.verbose:
-                print(' * saving', out_path)
+                print(f"[green] * saving : {out_path}[/]")
         except (OSError, Exception) as err:
             self._log_error(os.path.join(out_path, self.id_img + "." + self.config['format']), err)
 
@@ -196,7 +197,7 @@ class ManifestIIIF(ConfigIIIF):
         os.makedirs(self.out_dir, exist_ok=True)
 
     def __str__(self):
-        print(f"URI manifest is : {self.url}")
+        print(f"[blue]URI manifest is : {self.url}[/]")
 
     def _load_from_url(self, url: str):
         """Load a IIIF manifest from an url.
