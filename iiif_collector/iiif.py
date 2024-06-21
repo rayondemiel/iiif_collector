@@ -106,7 +106,7 @@ class ImageIIIF(ConfigIIIF):
             if session is None:
                 self.img = requests.get(url, stream=True, allow_redirects=True)
             else:
-                assert isinstance(session, requests.Session), "Session need to be instanced"
+                assert isinstance(type(session), type(requests.Session)), "Session need to be instanced"
                 self.img = session.get(url, stream=True, allow_redirects=True)
             # Check status request
             if 200 <= self.img.status_code < 400:
