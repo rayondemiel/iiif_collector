@@ -159,6 +159,7 @@ class ImageIIIF(ConfigIIIF):
         :return:
         """
         parts = filename.split(".")
+        parts[0] = self.config['quality']
         parts[-1] = self.config['format'] if self.config['format'] != 'default' else parts[-1]
         return '.'.join(parts)
 
