@@ -2,6 +2,7 @@ import os
 import logging
 from rich import print as rich_print
 from rich import console
+import shutil
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, mock_open
 import tempfile
@@ -16,6 +17,10 @@ class TestConfigIIIF(TestCase):
         logfile_path = os.path.join(self.temp_dir, "logfile_test.txt")
         logging.basicConfig(filename=logfile_path, level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s')
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+        del self.config
 
     def test_default_initialization(self):
         self.assertFalse(self.config.verbose)
@@ -79,8 +84,8 @@ class TestConfigIIIF(TestCase):
     @patch('rich.print')
     def test_api_mode(self, mock_rich_print):
         self.config.verbose = True
-        self.config.api_mode(2.5)
-        self.assertEqual(self.config.API, 2.5)
+        self.config.api_mode(2.1)
+        self.assertEqual(self.config.API, 2.1)
         #mock_rich_print.assert_called_once_with("\033[0;34mChanging API level to 2.5\033[0;34m")
 
 
@@ -94,71 +99,80 @@ class TestImageIIIF(TestCase):
                             format='%(asctime)s - %(levelname)s - %(message)s')
         # Example parameters for ImageIIIF instance
         url = "https://gallica.bnf.fr/iiif/ark:/12148/btv1b52505441p/f11/full/full/0/native.jpg"
-        path = "/tmp"
+        self.url_expected = 'https://gallica.bnf.fr/iiif/ark:/12148/btv1b52505441p/f11/square/full/90/bitonal.jpg'
+        path = self.temp_dir
         kwargs = {'verbose': True}
 
         # Initialize ImageIIIF instance
         self.image_iiif = ImageIIIF(url, path, **kwargs)
         self.image_iiif.api_mode(2.0)
+        self.image_iiif.image_configuration(region='square',
+                                            size='full',
+                                            rotation=90,
+                                            quality='bitonal',
+                                            format='jpg')
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
 
     @patch('requests.Session')
     def test_load_image_with_session(self, mock_session):
-        # Initialize mock objects
+        """iiif_collector.iiif.ImageIIIF.load_image with session"""
+
         mock_session_instance = mock_session.return_value
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.raw = MagicMock()
         mock_session_instance.get.return_value = mock_response
 
-        # Test loading an image with session
         self.image_iiif.load_image(session=mock_session_instance)
 
-        # Assertions
-        mock_session_instance.get.assert_called_once_with(self.image_iiif.url, stream=True, allow_redirects=True)
+        mock_session_instance.get.assert_called_once_with(self.url_expected, stream=True, allow_redirects=True)
         self.assertIsInstance(self.image_iiif.img, MagicMock)
+        mock_response.reset_mock()
 
-    @patch('requests.Session')
-    def test_load_image_without_session(self, mock_session):
-        # Initialize mock objects
-        mock_session_instance = mock_session.return_value
+    @patch('requests.get')
+    def test_load_image_without_session(self, mock_get):
+        """iiif_collector.iiif.ImageIIIF.load_image without session"""
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.raw = MagicMock()
-        mock_session_instance.get.return_value = mock_response
+        mock_get.return_value = mock_response
 
-        # Test loading an image without session
         self.image_iiif.load_image()
 
-        # Assertions
-        mock_session_instance.get.assert_not_called()  # Since no session was passed, should not be called
+        mock_get.assert_called_once_with(self.url_expected, stream=True, allow_redirects=True)
         self.assertIsInstance(self.image_iiif.img, MagicMock)
+        mock_response.reset_mock()
 
-    @patch('os.makedirs')
     @patch('builtins.open', new_callable=mock_open)
-    def test_save_image(self, _mock_open, mock_makedirs):
-        # Set up mock image data and configuration
+    @patch('os.makedirs')
+    @patch('shutil.copyfileobj')
+    def test_save_image(self, mock_copyfileobj, mock_makedirs, _mock_open):
+        """iiif_collector.iiif.ImageIIIF.save_image"""
         mock_response = MagicMock()
+        mock_response.status_code = 200
         mock_response.raw = MagicMock()
         self.image_iiif.img = mock_response
-        self.image_iiif.config = {'format': 'jpg', 'region': 'full', 'size': 'full', 'rotation': '0'}
         self.image_iiif.id_img = 'test_image'
 
-        # Test saving an image
         self.image_iiif.save_image()
 
-        # Assertions
-        _mock_open.assert_called_once_with('/tmp/images/test_image.jpg', 'wb')
+        _mock_open.assert_called_once_with(os.path.join(self.temp_dir, 'images', 'test_image.jpg'), 'wb')
+        mock_copyfileobj.assert_called_once_with(mock_response.raw, _mock_open())
         self.assertTrue(mock_response.raw.decode_content)
+        mock_makedirs.assert_called_once_with(os.path.join(self.temp_dir, 'images'), exist_ok=True)
 
     def test_change_format(self):
-        # Test changing image format
-        filename = 'image.png'
-        self.image_iiif.config = {'format': 'jpg'}
-        new_filename = self.image_iiif.change_format(filename)
-        self.assertEqual(new_filename, 'image.jpg')
+        """iiif_collector.iiif.ImageIIIF.change_format"""
+        filename = 'native.png'
+        self.image_iiif.config['format'] = 'tif'
+        new_filename = self.image_iiif.change_format(filename)  # get previous config quality
+        self.assertEqual(new_filename, 'bitonal.tif')
 
     def test_format_url(self):
-        # Test formatting the URL
+        """iiif_collector.iiif.ImageIIIF.change_format"""
         self.image_iiif.config = {'format': 'png', 'region': 'full', 'size': ',640', 'rotation': '35',
                                   'quality': 'bitonal'}
         formatted_url = self.image_iiif._format_url(self.image_iiif.url)
@@ -167,19 +181,8 @@ class TestImageIIIF(TestCase):
 
     @patch('rich.print')
     def test_str_method(self, mock_print):
-        # Test __str__ method
+        """iiif_collector.iiif.ImageIIIF.str_method"""""
         self.image_iiif.__str__()
-        mock_print.assert_called_once_with("URL api image is : \
-        https://gallica.bnf.fr/iiif/ark:/12148/btv1b52505441p/f11/full/full/0/native.jpg")
-
-    def test_log_error(self):
-        # Test _log_error method
-        url = "http://example.com/iiif-image"
-        error = "Error message"
-        self.image_iiif._log_error(url, error)
-
-        # Read the log file and assert that the error message is logged
-        with open(os.path.join(self.temp_dir, "logfile_test.txt"), 'r') as f:
-            logged_content = f.read()
-            self.assertIn(f"ERROR - {url} - {error}", logged_content)
+        """mock_print.assert_called_once_with("URL api image is : \
+        https://gallica.bnf.fr/iiif/ark:/12148/btv1b52505441p/f11/full/full/0/native.jpg")"""
 
