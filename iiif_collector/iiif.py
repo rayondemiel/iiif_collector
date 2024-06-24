@@ -210,7 +210,6 @@ class ManifestIIIF(ConfigIIIF):
             print(f'[blue]* loading manifest from url {url}[/]')
         try:
             if self.session is not None:
-                assert isinstance(self.session, requests.Session), "Session need to be instanced"
                 self.json = self.session.get(url).json()
             else:
                 self.json = requests.get(url).json()
@@ -250,6 +249,7 @@ class ManifestIIIF(ConfigIIIF):
         Get the title of manifest
         :return: str, title of manifest
         """
+        print(self.json)
         return suppress_char(self.json['label'])
 
     def save_manifest(self):
