@@ -308,7 +308,6 @@ class ManifestIIIF(ConfigIIIF):
                                                   images_per_second=0.0)
                 start_time_total = time.time()
                 for url, filename in images:
-                    print(url)
                     image = ImageIIIF(url, self.out_dir, short_filename=self.short_filename)
                     image.config = self.config
                     start_time = time.time()
