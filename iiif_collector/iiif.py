@@ -249,7 +249,6 @@ class ManifestIIIF(ConfigIIIF):
         Get the title of manifest
         :return: str, title of manifest
         """
-        print(self.json)
         return suppress_char(self.json['label'])
 
     def save_manifest(self):
