@@ -296,10 +296,11 @@ class ManifestIIIF(ConfigIIIF):
 
         if self._json_present():
             images = self.get_images_from_manifest()
+            print(images)
             if self.random and self.n is not None:
                 images = randomized(images, self.n)
             elif self.n is not None:
-                images = zip(images, range(min(self.n, len(images) - 1)))
+                images = images[:min(self.n, len(images) - 1)]
 
             with Live(group, refresh_per_second=10):
                 task1 = overall_progress.add_task("[cyan]Saving images from manifest IIIF",
@@ -307,6 +308,7 @@ class ManifestIIIF(ConfigIIIF):
                                                   images_per_second=0.0)
                 start_time_total = time.time()
                 for url, filename in images:
+                    print(url)
                     image = ImageIIIF(url, self.out_dir, short_filename=self.short_filename)
                     image.config = self.config
                     start_time = time.time()
@@ -351,7 +353,7 @@ class ManifestIIIF(ConfigIIIF):
                     overall_progress.update(task1,
                                     description=f"[cyan]Saving images from manifest IIIF ({images_per_second:.2f} images/s)")"""
 
-            journal_error(level='INFO', object=url, message=str("Image saved"))
+            journal_error(level='INFO', object=self.url, message=str("Manifest images saved"))
             if self.verbose:
                 print('[green]Finished saving images![/]')
 
