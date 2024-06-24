@@ -256,8 +256,8 @@ class ManifestIIIF(ConfigIIIF):
         if self._json_present():
             out_path = os.path.join(self.out_dir, 'manifests')
             save_json(iiif_json=self.json, file_path=out_path)
+            journal_error(level='INFO', object=self.url, message=str("Manifest saved"))
             if self.verbose:
-                journal_error(level='INFO', object=self.url, message=str("Manifest saved"))
                 print('[green]Finished saving manifests![/]')
 
     def get_images_from_manifest(self) -> ImageList:
