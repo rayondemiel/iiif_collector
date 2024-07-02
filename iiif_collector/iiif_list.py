@@ -16,6 +16,9 @@ class ListIIIF(object):
         """
         self.verbose = kwargs.get('verbose', False)
         self.case = kwargs.get('case_insensitive', False)
+        self.url_iiif = []
+        self.len_iiif = 0
+
     def __len__(self):
         """
         Returns the number of IIIF URLs currently stored.

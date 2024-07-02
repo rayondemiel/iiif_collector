@@ -106,7 +106,6 @@ class ImageIIIF(ConfigIIIF):
             if session is None:
                 self.img = requests.get(url, stream=True, allow_redirects=True)
             else:
-                assert isinstance(session, requests.Session), "Session need to be instanced"
                 self.img = session.get(url, stream=True, allow_redirects=True)
             # Check status request
             if 200 <= self.img.status_code < 400:
@@ -159,6 +158,7 @@ class ImageIIIF(ConfigIIIF):
         :return:
         """
         parts = filename.split(".")
+        parts[0] = self.config['quality']
         parts[-1] = self.config['format'] if self.config['format'] != 'default' else parts[-1]
         return '.'.join(parts)
 
@@ -210,7 +210,6 @@ class ManifestIIIF(ConfigIIIF):
             print(f'[blue]* loading manifest from url {url}[/]')
         try:
             if self.session is not None:
-                assert isinstance(self.session, requests.Session), "Session need to be instanced"
                 self.json = self.session.get(url).json()
             else:
                 self.json = requests.get(url).json()
@@ -257,8 +256,8 @@ class ManifestIIIF(ConfigIIIF):
         if self._json_present():
             out_path = os.path.join(self.out_dir, 'manifests')
             save_json(iiif_json=self.json, file_path=out_path)
+            journal_error(level='INFO', object=self.url, message=str("Manifest saved"))
             if self.verbose:
-                journal_error(level='INFO', object=self.url, message=str("Manifest saved"))
                 print('[green]Finished saving manifests![/]')
 
     def get_images_from_manifest(self) -> ImageList:
@@ -297,10 +296,11 @@ class ManifestIIIF(ConfigIIIF):
 
         if self._json_present():
             images = self.get_images_from_manifest()
+            print(images)
             if self.random and self.n is not None:
                 images = randomized(images, self.n)
             elif self.n is not None:
-                images = zip(images, range(min(self.n, len(images) - 1)))
+                images = images[:min(self.n, len(images) - 1)]
 
             with Live(group, refresh_per_second=10):
                 task1 = overall_progress.add_task("[cyan]Saving images from manifest IIIF",
@@ -352,7 +352,7 @@ class ManifestIIIF(ConfigIIIF):
                     overall_progress.update(task1,
                                     description=f"[cyan]Saving images from manifest IIIF ({images_per_second:.2f} images/s)")"""
 
-            journal_error(level='INFO', object=url, message=str("Image saved"))
+            journal_error(level='INFO', object=self.url, message=str("Manifest images saved"))
             if self.verbose:
                 print('[green]Finished saving images![/]')
 
