@@ -140,11 +140,11 @@ class ImageIIIFAsync(ImageIIIF):
                 if retry_count < max_retries:
                     await asyncio.sleep(retry_delay)
                 else:
-                    journal_error(level="ERROR", object=url, error="ClientError")
+                    journal_error(level="ERROR", object=url, message="ClientError")
             except Exception as err:
                 if self.verbose:
                     print(f"[red]Error processing URL: {url}. Exception: {err}")
-                journal_error(level="ERROR", object=self.url, error=str(err))
+                journal_error(level="ERROR", object=self.url, message=str(err))
 
 
 class ParallelizeIIIF(ConfigIIIF):
